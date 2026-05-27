@@ -1,0 +1,27 @@
+camera:
+  index: 0
+  width: 1280
+  height: 720
+  target_fps: 24
+
+face:
+  enabled: true
+  model_name: buffalo_l
+  detection_size: [640, 640]
+  recognition_threshold: 0.38
+  opencv_threshold: 72.0
+  database_path: data/faces.json
+  providers:
+    - CPUExecutionProvider
+
+gesture:
+  enabled: true
+  max_hands: 2
+  detection_confidence: 0.55
+  tracking_confidence: 0.55
+  fallback_label: unknown
+
+overlay:
+  debug: true
+  mirror: true
+  snapshot_dir: snapshots

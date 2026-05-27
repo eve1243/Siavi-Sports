@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SIAVI FaceID Login</title>
+    <style>
+      :root {
+        color: #18202f;
+        background: #f3f6fb;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-width: 320px;
+        min-height: 100vh;
+        background:
+          radial-gradient(circle at 10% 0%, rgba(41, 128, 255, 0.14), transparent 30%),
+          linear-gradient(180deg, #ffffff 0%, #eef3fa 100%);
+      }
+
+      main {
+        width: min(1180px, calc(100% - 28px));
+        margin: 0 auto;
+        padding: 28px 0;
+      }
+
+      header {
+        display: flex;
+        align-items: end;
+        justify-content: space-between;
+        gap: 18px;
+        margin-bottom: 18px;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(2.2rem, 6vw, 4.4rem);
+        line-height: 0.95;
+      }
+
+      p {
+        color: #596273;
+        line-height: 1.5;
+      }
+
+      .status-pill {
+        min-width: 180px;
+        padding: 12px 14px;
+        border: 1px solid rgba(22, 32, 52, 0.1);
+        border-radius: 8px;
+        background: #ffffff;
+        font-weight: 900;
+        text-align: center;
+      }
+
+      .status-pill.ok {
+        color: #137245;
+        background: #eefaf4;
+      }
+
+      .status-pill.warn {
+        color: #9a5b00;
+        background: #fff7e6;
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 360px;
+        gap: 18px;
+        align-items: start;
+      }
+
+      .camera-panel,
+      .login-panel {
+        border: 1px solid rgba(22, 32, 52, 0.1);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.86);
+        box-shadow: 0 18px 45px rgba(26, 37, 58, 0.1);
+      }
+
+      .camera-panel {
+        overflow: hidden;
+        min-height: 430px;
+        background: #10151f;
+      }
+
+      .camera-panel img {
+        display: block;
+        width: 100%;
+        min-height: 430px;
+        object-fit: cover;
+      }
+
+      .login-panel {
+        display: grid;
+        gap: 16px;
+        padding: 20px;
+      }
+
+      .field {
+        display: grid;
+        gap: 8px;
+      }
+
+      label {
+        font-weight: 900;
+      }
+
+      input {
+        width: 100%;
+        min-height: 48px;
+        border: 1px solid rgba(22, 32, 52, 0.14);
+        border-radius: 8px;
+        padding: 0 13px;
+        font: inherit;
+      }
+
+      button {
+        min-height: 48px;
+        border: 0;
+        border-radius: 8px;
+        color: #ffffff;
+        background: #1769e0;
+        cursor: pointer;
+        font: inherit;
+        font-weight: 900;
+      }
+
+      button.secondary {
+        color: #1769e0;
+        border: 1px solid rgba(23, 105, 224, 0.24);
+        background: #ffffff;
+      }
+
+      .message {
+        min-height: 44px;
+        padding: 11px 12px;
+        border-radius: 8px;
+        background: #f3f6fb;
+        color: #4d586b;
+      }
+
+      .list {
+        display: grid;
+        gap: 8px;
+      }
+
+      .list div {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 10px 12px;
+        border-radius: 8px;
+        background: #f8fafd;
+        color: #4d586b;
+      }
+
+      @media (max-width: 880px) {
+        header,
+        .layout {
+          grid-template-columns: 1fr;
+          display: grid;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <div>
+          <h1>FaceID Login</h1>
+          <p>Lokale Gesichtserkennung mit Python-Backend und moderner UI.</p>
+        </div>
+        <div id="auth-pill" class="status-pill warn">Nicht eingeloggt</div>
+      </header>
+
+      <section class="layout">
+        <div class="camera-panel">
+          <img src="/video.mjpg" alt="Live Kamera mit FaceID Overlay" />
+        </div>
+
+        <aside class="login-panel">
+          <div>
+            <h2>Registrieren</h2>
+            <p>Schau in die Kamera, gib deinen Namen ein und registriere dein Gesicht.</p>
+          </div>
+
+          <div class="field">
+            <label for="name">Name</label>
+            <input id="name" autocomplete="name" placeholder="Dein Name" />
+          </div>
+
+          <button id="register-button" type="button">Gesicht registrieren</button>
+          <button class="secondary" id="refresh-button" type="button">Status aktualisieren</button>
+
+          <div id="message" class="message">Warte auf Kamera...</div>
+
+          <div>
+            <h3>Status</h3>
+            <div id="status-list" class="list"></div>
+          </div>
+        </aside>
+      </section>
+    </main>
+
+    <script>
+      const authPill = document.querySelector("#auth-pill");
+      const message = document.querySelector("#message");
+      const nameInput = document.querySelector("#name");
+      const statusList = document.querySelector("#status-list");
+
+      async function loadStatus() {
+        const response = await fetch("/api/status");
+        const status = await response.json();
+        authPill.textContent = status.authenticated
+          ? `Eingeloggt: ${status.authenticatedName}`
+          : "Nicht eingeloggt";
+        authPill.className = `status-pill ${status.authenticated ? "ok" : "warn"}`;
+
+        const gestureText = status.gestures.length
+          ? status.gestures.map((entry) => entry.label).join(", ")
+          : "unknown";
+        const profileText = status.profiles.length ? status.profiles.join(", ") : "keine";
+        statusList.innerHTML = `
+          <div><strong>FaceID bereit</strong><span>${status.recognitionReady ? "ja" : "optional installieren"}</span></div>
+          <div><strong>Gesichter</strong><span>${status.faceCount}</span></div>
+          <div><strong>Gesten</strong><span>${gestureText}</span></div>
+          <div><strong>Profile</strong><span>${profileText}</span></div>
+          <div><strong>FPS</strong><span>${status.fps}</span></div>
+        `;
+
+        if (status.error) {
+          message.textContent = status.error;
+        } else if (!status.recognitionReady) {
+          message.textContent = "FaceID Registrierung braucht: pip install -r requirements-face-recognition.txt";
+        } else if (status.authenticated) {
+          message.textContent = `Willkommen, ${status.authenticatedName}.`;
+        } else {
+          message.textContent = "Schau in die Kamera oder registriere dein Gesicht.";
+        }
+      }
+
+      async function registerFace() {
+        const name = nameInput.value.trim();
+        if (!name) {
+          message.textContent = "Bitte gib zuerst einen Namen ein.";
+          return;
+        }
+
+        const response = await fetch("/api/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name }),
+        });
+        const result = await response.json();
+        message.textContent = result.message;
+        await loadStatus();
+      }
+
+      document.querySelector("#register-button").addEventListener("click", registerFace);
+      document.querySelector("#refresh-button").addEventListener("click", loadStatus);
+      setInterval(loadStatus, 1000);
+      loadStatus();
+    </script>
+  </body>
+</html>
