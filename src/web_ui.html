@@ -1,13 +1,13 @@
 <!doctype html>
-<html lang="de">
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>SIAVI FaceID Login</title>
+    <title>SIAVI FaceID Training</title>
     <style>
       :root {
         color: #18202f;
-        background: #f3f6fb;
+        background: #f4f7fb;
         font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       }
 
@@ -16,12 +16,18 @@
       }
 
       body {
-        margin: 0;
         min-width: 320px;
         min-height: 100vh;
+        margin: 0;
         background:
-          radial-gradient(circle at 10% 0%, rgba(41, 128, 255, 0.14), transparent 30%),
-          linear-gradient(180deg, #ffffff 0%, #eef3fa 100%);
+          radial-gradient(circle at 12% 0%, rgba(40, 121, 255, 0.14), transparent 32%),
+          linear-gradient(180deg, #ffffff 0%, #edf3fa 100%);
+      }
+
+      button,
+      input,
+      select {
+        font: inherit;
       }
 
       main {
@@ -38,9 +44,16 @@
         margin-bottom: 18px;
       }
 
+      h1,
+      h2,
+      h3,
+      p {
+        margin-top: 0;
+      }
+
       h1 {
-        margin: 0;
-        font-size: clamp(2.2rem, 6vw, 4.4rem);
+        margin-bottom: 8px;
+        font-size: clamp(2.2rem, 6vw, 4.2rem);
         line-height: 0.95;
       }
 
@@ -49,14 +62,28 @@
         line-height: 1.5;
       }
 
-      .status-pill {
-        min-width: 180px;
-        padding: 12px 14px;
-        border: 1px solid rgba(22, 32, 52, 0.1);
+      .top-actions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: end;
+        gap: 10px;
+      }
+
+      .status-pill,
+      select,
+      button {
+        min-height: 46px;
         border-radius: 8px;
+      }
+
+      .status-pill {
+        display: grid;
+        place-items: center;
+        min-width: 180px;
+        padding: 0 14px;
+        border: 1px solid rgba(22, 32, 52, 0.1);
         background: #ffffff;
         font-weight: 900;
-        text-align: center;
       }
 
       .status-pill.ok {
@@ -69,18 +96,31 @@
         background: #fff7e6;
       }
 
+      select,
+      input {
+        border: 1px solid rgba(22, 32, 52, 0.14);
+        background: #ffffff;
+      }
+
+      select {
+        padding: 0 12px;
+        font-weight: 800;
+      }
+
       .layout {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) 360px;
+        grid-template-columns: minmax(0, 1fr) 380px;
         gap: 18px;
         align-items: start;
       }
 
       .camera-panel,
-      .login-panel {
+      .side-panel,
+      .training-panel,
+      .metric {
         border: 1px solid rgba(22, 32, 52, 0.1);
         border-radius: 8px;
-        background: rgba(255, 255, 255, 0.86);
+        background: rgba(255, 255, 255, 0.9);
         box-shadow: 0 18px 45px rgba(26, 37, 58, 0.1);
       }
 
@@ -97,38 +137,58 @@
         object-fit: cover;
       }
 
-      .login-panel {
+      .side-panel,
+      .training-panel {
         display: grid;
         gap: 16px;
         padding: 20px;
       }
 
-      .field {
+      .tabs {
         display: grid;
+        grid-template-columns: 1fr 1fr;
         gap: 8px;
       }
 
+      .tabs button {
+        color: #1769e0;
+        border: 1px solid rgba(23, 105, 224, 0.22);
+        background: #ffffff;
+      }
+
+      .tabs button.active {
+        color: #ffffff;
+        background: #1769e0;
+      }
+
+      .form {
+        display: grid;
+        gap: 12px;
+      }
+
+      .field {
+        display: grid;
+        gap: 7px;
+      }
+
       label {
+        color: #18202f;
         font-weight: 900;
       }
 
-      input {
+      input,
+      .field select {
         width: 100%;
         min-height: 48px;
-        border: 1px solid rgba(22, 32, 52, 0.14);
         border-radius: 8px;
         padding: 0 13px;
-        font: inherit;
       }
 
       button {
-        min-height: 48px;
         border: 0;
-        border-radius: 8px;
         color: #ffffff;
         background: #1769e0;
         cursor: pointer;
-        font: inherit;
         font-weight: 900;
       }
 
@@ -142,30 +202,62 @@
         min-height: 44px;
         padding: 11px 12px;
         border-radius: 8px;
-        background: #f3f6fb;
         color: #4d586b;
+        background: #f3f6fb;
       }
 
-      .list {
+      .list,
+      .metrics {
         display: grid;
         gap: 8px;
       }
 
-      .list div {
+      .list div,
+      .metric {
         display: flex;
         justify-content: space-between;
         gap: 12px;
         padding: 10px 12px;
+        color: #4d586b;
+      }
+
+      .training-shell {
+        display: none;
+        margin-top: 18px;
+      }
+
+      .training-shell.visible {
+        display: block;
+      }
+
+      .training-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .training-card {
+        min-height: 124px;
+        padding: 16px;
+        border: 1px solid rgba(22, 32, 52, 0.1);
         border-radius: 8px;
         background: #f8fafd;
-        color: #4d586b;
+      }
+
+      .hidden {
+        display: none !important;
       }
 
       @media (max-width: 880px) {
         header,
-        .layout {
-          grid-template-columns: 1fr;
+        .layout,
+        .training-grid {
           display: grid;
+          grid-template-columns: 1fr;
+        }
+
+        .top-actions {
+          justify-content: stretch;
         }
       }
     </style>
@@ -174,97 +266,382 @@
     <main>
       <header>
         <div>
-          <h1>FaceID Login</h1>
-          <p>Lokale Gesichtserkennung mit Python-Backend und moderner UI.</p>
+          <h1 data-i18n="appTitle">FaceID Training</h1>
+          <p data-i18n="appSubtitle">Local face login with a protected training area.</p>
         </div>
-        <div id="auth-pill" class="status-pill warn">Nicht eingeloggt</div>
+        <div class="top-actions">
+          <select id="language-select" aria-label="Language">
+            <option value="en">English</option>
+            <option value="pt">Português</option>
+            <option value="sr">Srpski</option>
+          </select>
+          <div id="auth-pill" class="status-pill warn">Signed out</div>
+        </div>
       </header>
 
       <section class="layout">
         <div class="camera-panel">
-          <img src="/video.mjpg" alt="Live Kamera mit FaceID Overlay" />
+          <img src="/video.mjpg" alt="Live camera with FaceID overlay" />
         </div>
 
-        <aside class="login-panel">
-          <div>
-            <h2>Registrieren</h2>
-            <p>Schau in die Kamera, gib deinen Namen ein und registriere dein Gesicht.</p>
+        <aside id="auth-panel" class="side-panel">
+          <div class="tabs">
+            <button id="sign-in-tab" class="active" type="button" data-i18n="signIn">Sign in</button>
+            <button id="register-tab" type="button" data-i18n="register">Register</button>
           </div>
 
-          <div class="field">
-            <label for="name">Name</label>
-            <input id="name" autocomplete="name" placeholder="Dein Name" />
-          </div>
+          <section id="sign-in-view" class="form">
+            <div>
+              <h2 data-i18n="signInTitle">Sign in with FaceID</h2>
+              <p data-i18n="signInCopy">Look into the camera, then sign in with your registered face.</p>
+            </div>
+            <button id="sign-in-button" type="button" data-i18n="signInButton">Sign in</button>
+          </section>
 
-          <button id="register-button" type="button">Gesicht registrieren</button>
-          <button class="secondary" id="refresh-button" type="button">Status aktualisieren</button>
+          <section id="register-view" class="form hidden">
+            <div>
+              <h2 data-i18n="registerTitle">Create profile</h2>
+              <p data-i18n="registerCopy">Enter your profile details and keep your face visible.</p>
+            </div>
 
-          <div id="message" class="message">Warte auf Kamera...</div>
+            <div class="field">
+              <label for="name" data-i18n="nameLabel">Name</label>
+              <input id="name" autocomplete="name" placeholder="Name" />
+            </div>
+
+            <div class="field">
+              <label for="age" data-i18n="ageLabel">Age</label>
+              <input id="age" min="1" max="120" type="number" placeholder="Age" />
+            </div>
+
+            <div class="field">
+              <label for="gender" data-i18n="genderLabel">Gender</label>
+              <select id="gender">
+                <option value="female" data-i18n="genderFemale">Female</option>
+                <option value="male" data-i18n="genderMale">Male</option>
+                <option value="diverse" data-i18n="genderDiverse">Diverse</option>
+                <option value="prefer-not-to-say" data-i18n="genderPrivate">Prefer not to say</option>
+              </select>
+            </div>
+
+            <button id="register-button" type="button" data-i18n="registerButton">Register and sign in</button>
+          </section>
+
+          <div id="message" class="message">Waiting for camera...</div>
 
           <div>
-            <h3>Status</h3>
+            <h3 data-i18n="statusTitle">Status</h3>
             <div id="status-list" class="list"></div>
           </div>
         </aside>
       </section>
+
+      <section id="training-shell" class="training-shell">
+        <div class="training-panel">
+          <div>
+            <h2 id="training-title">Training</h2>
+            <p data-i18n="trainingCopy">This area is visible only after FaceID login.</p>
+          </div>
+
+          <div class="metrics">
+            <div class="metric"><strong data-i18n="activeUser">Active user</strong><span id="active-user">-</span></div>
+            <div class="metric"><strong data-i18n="currentGesture">Current gesture</strong><span id="current-gesture">unknown</span></div>
+            <div class="metric"><strong data-i18n="cameraFps">Camera FPS</strong><span id="camera-fps">0</span></div>
+          </div>
+
+          <div class="training-grid">
+            <div class="training-card">
+              <h3 data-i18n="warmupTitle">Warm-up</h3>
+              <p data-i18n="warmupCopy">Keep your hands visible and follow the gesture feedback.</p>
+            </div>
+            <div class="training-card">
+              <h3 data-i18n="gestureTitle">Gesture practice</h3>
+              <p data-i18n="gestureCopy">Try open hand, fist, thumbs up, peace and pointing.</p>
+            </div>
+            <div class="training-card">
+              <h3 data-i18n="sessionTitle">Session</h3>
+              <p data-i18n="sessionCopy">Training logic can be expanded here next.</p>
+            </div>
+          </div>
+
+          <button id="logout-button" class="secondary" type="button" data-i18n="logout">Log out</button>
+        </div>
+      </section>
     </main>
 
     <script>
+      const translations = {
+        en: {
+          appTitle: "FaceID Training",
+          appSubtitle: "Local face login with a protected training area.",
+          signedOut: "Signed out",
+          signedIn: "Signed in",
+          signIn: "Sign in",
+          register: "Register",
+          signInTitle: "Sign in with FaceID",
+          signInCopy: "Look into the camera, then sign in with your registered face.",
+          signInButton: "Sign in",
+          registerTitle: "Create profile",
+          registerCopy: "Enter your profile details and keep your face visible.",
+          nameLabel: "Name",
+          ageLabel: "Age",
+          genderLabel: "Gender",
+          genderFemale: "Female",
+          genderMale: "Male",
+          genderDiverse: "Diverse",
+          genderPrivate: "Prefer not to say",
+          registerButton: "Register and sign in",
+          statusTitle: "Status",
+          trainingCopy: "This area is visible only after FaceID login.",
+          activeUser: "Active user",
+          currentGesture: "Current gesture",
+          cameraFps: "Camera FPS",
+          warmupTitle: "Warm-up",
+          warmupCopy: "Keep your hands visible and follow the gesture feedback.",
+          gestureTitle: "Gesture practice",
+          gestureCopy: "Try open hand, fist, thumbs up, peace and pointing.",
+          sessionTitle: "Session",
+          sessionCopy: "Training logic can be expanded here next.",
+          logout: "Log out",
+          waiting: "Waiting for camera...",
+          enterName: "Please enter your name.",
+          enterAge: "Please enter a valid age.",
+          noProfiles: "none",
+          yes: "yes",
+          faces: "Faces",
+          gestures: "Gestures",
+          profiles: "Profiles",
+          faceIdReady: "FaceID ready",
+        },
+        pt: {
+          appTitle: "Treino com FaceID",
+          appSubtitle: "Login facial local com uma area de treino protegida.",
+          signedOut: "Sessao terminada",
+          signedIn: "Sessao iniciada",
+          signIn: "Entrar",
+          register: "Registar",
+          signInTitle: "Entrar com FaceID",
+          signInCopy: "Olha para a camara e entra com o rosto registado.",
+          signInButton: "Entrar",
+          registerTitle: "Criar perfil",
+          registerCopy: "Preenche os dados e mantem o rosto visivel.",
+          nameLabel: "Nome",
+          ageLabel: "Idade",
+          genderLabel: "Genero",
+          genderFemale: "Feminino",
+          genderMale: "Masculino",
+          genderDiverse: "Diverso",
+          genderPrivate: "Prefiro nao dizer",
+          registerButton: "Registar e entrar",
+          statusTitle: "Estado",
+          trainingCopy: "Esta area so aparece depois do login FaceID.",
+          activeUser: "Utilizador ativo",
+          currentGesture: "Gesto atual",
+          cameraFps: "FPS da camara",
+          warmupTitle: "Aquecimento",
+          warmupCopy: "Mantem as maos visiveis e segue o feedback dos gestos.",
+          gestureTitle: "Pratica de gestos",
+          gestureCopy: "Experimenta mao aberta, punho, polegar, paz e apontar.",
+          sessionTitle: "Sessao",
+          sessionCopy: "A logica de treino pode ser expandida aqui.",
+          logout: "Sair",
+          waiting: "A espera da camara...",
+          enterName: "Introduz o teu nome.",
+          enterAge: "Introduz uma idade valida.",
+          noProfiles: "nenhum",
+          yes: "sim",
+          faces: "Rostos",
+          gestures: "Gestos",
+          profiles: "Perfis",
+          faceIdReady: "FaceID pronto",
+        },
+        sr: {
+          appTitle: "FaceID trening",
+          appSubtitle: "Lokalna prijava licem sa zasticenim trening delom.",
+          signedOut: "Odjavljen",
+          signedIn: "Prijavljen",
+          signIn: "Prijava",
+          register: "Registracija",
+          signInTitle: "Prijava preko FaceID",
+          signInCopy: "Pogledaj u kameru i prijavi se registrovanim licem.",
+          signInButton: "Prijavi se",
+          registerTitle: "Napravi profil",
+          registerCopy: "Unesi podatke i drzi lice vidljivo.",
+          nameLabel: "Ime",
+          ageLabel: "Godine",
+          genderLabel: "Pol",
+          genderFemale: "Zenski",
+          genderMale: "Muski",
+          genderDiverse: "Razlicito",
+          genderPrivate: "Ne zelim da kazem",
+          registerButton: "Registruj i prijavi se",
+          statusTitle: "Status",
+          trainingCopy: "Ovaj deo je vidljiv samo posle FaceID prijave.",
+          activeUser: "Aktivni korisnik",
+          currentGesture: "Trenutni gest",
+          cameraFps: "FPS kamere",
+          warmupTitle: "Zagrevanje",
+          warmupCopy: "Drzi ruke vidljive i prati povratne informacije.",
+          gestureTitle: "Vezba gestova",
+          gestureCopy: "Probaj otvorenu saku, pesnicu, palac gore, mir i pokazivanje.",
+          sessionTitle: "Sesija",
+          sessionCopy: "Logika treninga moze ovde dalje da se prosiri.",
+          logout: "Odjavi se",
+          waiting: "Ceka se kamera...",
+          enterName: "Unesi ime.",
+          enterAge: "Unesi validne godine.",
+          noProfiles: "nema",
+          yes: "da",
+          faces: "Lica",
+          gestures: "Gestovi",
+          profiles: "Profili",
+          faceIdReady: "FaceID spreman",
+        },
+      };
+
+      let language = localStorage.getItem("siavi-language") || "en";
+      let lastStatus = null;
+
       const authPill = document.querySelector("#auth-pill");
       const message = document.querySelector("#message");
       const nameInput = document.querySelector("#name");
+      const ageInput = document.querySelector("#age");
+      const genderSelect = document.querySelector("#gender");
+      const languageSelect = document.querySelector("#language-select");
       const statusList = document.querySelector("#status-list");
+      const signInTab = document.querySelector("#sign-in-tab");
+      const registerTab = document.querySelector("#register-tab");
+      const signInView = document.querySelector("#sign-in-view");
+      const registerView = document.querySelector("#register-view");
+      const authPanel = document.querySelector("#auth-panel");
+      const trainingShell = document.querySelector("#training-shell");
+      const activeUser = document.querySelector("#active-user");
+      const currentGesture = document.querySelector("#current-gesture");
+      const cameraFps = document.querySelector("#camera-fps");
 
-      async function loadStatus() {
-        const response = await fetch("/api/status");
-        const status = await response.json();
+      function t(key) {
+        return translations[language][key] || translations.en[key] || key;
+      }
+
+      function applyLanguage() {
+        document.documentElement.lang = language;
+        languageSelect.value = language;
+        document.querySelectorAll("[data-i18n]").forEach((element) => {
+          element.textContent = t(element.dataset.i18n);
+        });
+        nameInput.placeholder = t("nameLabel");
+        ageInput.placeholder = t("ageLabel");
+        renderStatus(lastStatus);
+      }
+
+      function setTab(tab) {
+        const registerActive = tab === "register";
+        signInTab.classList.toggle("active", !registerActive);
+        registerTab.classList.toggle("active", registerActive);
+        signInView.classList.toggle("hidden", registerActive);
+        registerView.classList.toggle("hidden", !registerActive);
+      }
+
+      function renderStatus(status) {
+        if (!status) {
+          authPill.textContent = t("signedOut");
+          message.textContent = t("waiting");
+          return;
+        }
+
         authPill.textContent = status.authenticated
-          ? `Eingeloggt: ${status.authenticatedName}`
-          : "Nicht eingeloggt";
+          ? `${t("signedIn")}: ${status.authenticatedName}`
+          : t("signedOut");
         authPill.className = `status-pill ${status.authenticated ? "ok" : "warn"}`;
+
+        authPanel.classList.toggle("hidden", status.authenticated);
+        trainingShell.classList.toggle("visible", status.authenticated);
+        activeUser.textContent = status.authenticatedName || "-";
 
         const gestureText = status.gestures.length
           ? status.gestures.map((entry) => entry.label).join(", ")
           : "unknown";
-        const profileText = status.profiles.length ? status.profiles.join(", ") : "keine";
+        const profileText = status.profiles.length
+          ? status.profiles.map((entry) => entry.name).join(", ")
+          : t("noProfiles");
+        currentGesture.textContent = gestureText;
+        cameraFps.textContent = status.fps;
+
         statusList.innerHTML = `
-          <div><strong>FaceID bereit</strong><span>${status.recognitionReady ? "ja" : "optional installieren"}</span></div>
-          <div><strong>Gesichter</strong><span>${status.faceCount}</span></div>
-          <div><strong>Gesten</strong><span>${gestureText}</span></div>
-          <div><strong>Profile</strong><span>${profileText}</span></div>
-          <div><strong>FPS</strong><span>${status.fps}</span></div>
+          <div><strong>${t("faceIdReady")}</strong><span>${status.recognitionReady ? t("yes") : "no"}</span></div>
+          <div><strong>${t("faces")}</strong><span>${status.faceCount}</span></div>
+          <div><strong>${t("gestures")}</strong><span>${gestureText}</span></div>
+          <div><strong>${t("profiles")}</strong><span>${profileText}</span></div>
         `;
 
         if (status.error) {
           message.textContent = status.error;
-        } else if (!status.recognitionReady) {
-          message.textContent = "FaceID Registrierung braucht: pip install -r requirements-face-recognition.txt";
         } else if (status.authenticated) {
-          message.textContent = `Willkommen, ${status.authenticatedName}.`;
+          message.textContent = `${t("signedIn")}: ${status.authenticatedName}`;
         } else {
-          message.textContent = "Schau in die Kamera oder registriere dein Gesicht.";
+          message.textContent = t("waiting");
         }
+      }
+
+      async function loadStatus() {
+        const response = await fetch("/api/status");
+        lastStatus = await response.json();
+        renderStatus(lastStatus);
       }
 
       async function registerFace() {
         const name = nameInput.value.trim();
+        const age = Number(ageInput.value);
+        const gender = genderSelect.value;
+
         if (!name) {
-          message.textContent = "Bitte gib zuerst einen Namen ein.";
+          message.textContent = t("enterName");
+          return;
+        }
+
+        if (!Number.isFinite(age) || age < 1 || age > 120) {
+          message.textContent = t("enterAge");
           return;
         }
 
         const response = await fetch("/api/register", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name }),
+          body: JSON.stringify({ name, age, gender }),
         });
         const result = await response.json();
         message.textContent = result.message;
         await loadStatus();
       }
 
+      async function signIn() {
+        const response = await fetch("/api/sign-in", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({}),
+        });
+        const result = await response.json();
+        message.textContent = result.message;
+        await loadStatus();
+      }
+
+      async function logout() {
+        await fetch("/api/logout", { method: "POST" });
+        await loadStatus();
+      }
+
+      languageSelect.addEventListener("change", () => {
+        language = languageSelect.value;
+        localStorage.setItem("siavi-language", language);
+        applyLanguage();
+      });
+      signInTab.addEventListener("click", () => setTab("sign-in"));
+      registerTab.addEventListener("click", () => setTab("register"));
       document.querySelector("#register-button").addEventListener("click", registerFace);
-      document.querySelector("#refresh-button").addEventListener("click", loadStatus);
+      document.querySelector("#sign-in-button").addEventListener("click", signIn);
+      document.querySelector("#logout-button").addEventListener("click", logout);
+
+      applyLanguage();
       setInterval(loadStatus, 1000);
       loadStatus();
     </script>

@@ -4,7 +4,7 @@ import json
 import threading
 import time
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 import cv2
 import numpy as np
@@ -22,6 +22,12 @@ from overlay import draw_faces, draw_gestures, draw_status
 
 class RegisterRequest(BaseModel):
     name: str
+    age: Optional[int] = None
+    gender: Optional[str] = None
+
+
+class LoginRequest(BaseModel):
+    name: Optional[str] = None
 
 
 class RecognitionEngine:
@@ -39,6 +45,7 @@ class RecognitionEngine:
         self.thread: threading.Thread | None = None
         self.fps = 0.0
         self.placeholder_jpeg = self._create_placeholder_frame("Waiting for camera permission")
+        self.active_user: str | None = None
 
     def start(self) -> None:
         if self.running:
@@ -134,10 +141,12 @@ class RecognitionEngine:
                 (face.name for face in self.latest_faces if face.name not in {"unknown", "face"}),
                 None,
             )
+            if authenticated:
+                self.active_user = authenticated
 
             return {
-                "authenticated": authenticated is not None,
-                "authenticatedName": authenticated,
+                "authenticated": self.active_user is not None,
+                "authenticatedName": self.active_user,
                 "error": self.error,
                 "faceCount": len(self.latest_faces),
                 "faces": recognized_faces,
@@ -145,24 +154,46 @@ class RecognitionEngine:
                 "gestureCount": len(self.latest_gestures),
                 "gestures": gestures,
                 "recognitionReady": self.face_service.recognition_ready,
-                "profiles": self.face_service.registered_names,
+                "profiles": self.face_service.registered_profiles,
             }
 
-    def register(self, name: str) -> tuple[bool, str]:
+    def register(self, name: str, age: int | None, gender: str | None) -> tuple[bool, str]:
         with self.lock:
             faces = list(self.latest_faces)
 
         if not faces:
-            return False, "Kein Gesicht sichtbar. Schau in die Kamera und versuch es nochmal."
+            return False, "No face is visible. Look into the camera and try again."
 
         target = max(faces, key=lambda face: (face.box[2] - face.box[0]) * (face.box[3] - face.box[1]))
 
         try:
-            self.face_service.register(name, target)
+            self.face_service.register(name, target, age, gender)
         except Exception as error:
             return False, str(error)
 
-        return True, f"{name} wurde registriert."
+        self.active_user = name
+        return True, f"{name} has been registered and signed in."
+
+    def sign_in(self, requested_name: str | None = None) -> tuple[bool, str]:
+        with self.lock:
+            faces = list(self.latest_faces)
+
+        recognized = next(
+            (face.name for face in faces if face.name not in {"unknown", "face"}),
+            None,
+        )
+
+        if recognized is None:
+            return False, "No registered face recognized yet."
+
+        if requested_name and requested_name.casefold() != recognized.casefold():
+            return False, f"Recognized {recognized}, not {requested_name}."
+
+        self.active_user = recognized
+        return True, f"Welcome back, {recognized}."
+
+    def logout(self) -> None:
+        self.active_user = None
 
     def _create_placeholder_frame(self, text: str) -> bytes:
         frame = np.zeros((720, 1280, 3), dtype=np.uint8)
@@ -222,8 +253,20 @@ def status() -> JSONResponse:
 
 @app.post("/api/register")
 def register(request: RegisterRequest) -> JSONResponse:
-    ok, message = engine.register(request.name)
+    ok, message = engine.register(request.name, request.age, request.gender)
     return JSONResponse({"ok": ok, "message": message}, status_code=200 if ok else 400)
+
+
+@app.post("/api/sign-in")
+def sign_in(request: LoginRequest) -> JSONResponse:
+    ok, message = engine.sign_in(request.name)
+    return JSONResponse({"ok": ok, "message": message}, status_code=200 if ok else 400)
+
+
+@app.post("/api/logout")
+def logout() -> JSONResponse:
+    engine.logout()
+    return JSONResponse({"ok": True, "message": "Signed out."})
 
 
 def main() -> None:

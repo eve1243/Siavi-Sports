@@ -20,6 +20,8 @@ class FaceProfile:
 class OpenCvFaceSample:
     name: str
     image: np.ndarray
+    age: int | None = None
+    gender: str | None = None
 
 
 def _normalize_embedding(embedding: np.ndarray) -> np.ndarray:
@@ -69,9 +71,23 @@ class FaceRecognitionService:
 
     @property
     def registered_names(self) -> list[str]:
-        names = {profile.name for profile in self.profiles}
-        names.update(sample.name for sample in self.opencv_samples)
-        return sorted(names)
+        return [profile["name"] for profile in self.registered_profiles]
+
+    @property
+    def registered_profiles(self) -> list[dict[str, str | int | None]]:
+        profiles: dict[str, dict[str, str | int | None]] = {
+            profile.name: {"name": profile.name, "age": None, "gender": None}
+            for profile in self.profiles
+        }
+
+        for sample in self.opencv_samples:
+            profiles[sample.name] = {
+                "name": sample.name,
+                "age": sample.age,
+                "gender": sample.gender,
+            }
+
+        return sorted(profiles.values(), key=lambda profile: str(profile["name"]).casefold())
 
     def load_profiles(self) -> None:
         if not self.database_path.exists():
@@ -96,8 +112,16 @@ class FaceRecognitionService:
         raw = np.load(self.opencv_database_path, allow_pickle=True)
         names = [str(name) for name in raw["names"].tolist()]
         images = [image.astype(np.uint8) for image in raw["images"]]
+        ages = raw["ages"].tolist() if "ages" in raw else [None] * len(names)
+        genders = raw["genders"].tolist() if "genders" in raw else [None] * len(names)
         self.opencv_samples = [
-            OpenCvFaceSample(name=name, image=image) for name, image in zip(names, images)
+            OpenCvFaceSample(
+                name=name,
+                image=image,
+                age=int(age) if age is not None else None,
+                gender=str(gender) if gender is not None else None,
+            )
+            for name, image, age, gender in zip(names, images, ages, genders)
         ]
         self._train_opencv_recognizer()
 
@@ -110,6 +134,8 @@ class FaceRecognitionService:
             self.opencv_database_path,
             names=np.asarray([sample.name for sample in self.opencv_samples], dtype=object),
             images=np.asarray([sample.image for sample in self.opencv_samples], dtype=np.uint8),
+            ages=np.asarray([sample.age for sample in self.opencv_samples], dtype=object),
+            genders=np.asarray([sample.gender for sample in self.opencv_samples], dtype=object),
         )
 
     def save_profiles(self) -> None:
@@ -204,13 +230,19 @@ class FaceRecognitionService:
 
         return self.opencv_samples[label].name, similarity
 
-    def register(self, name: str, detection: FaceDetection) -> None:
+    def register(
+        self,
+        name: str,
+        detection: FaceDetection,
+        age: int | None = None,
+        gender: str | None = None,
+    ) -> None:
         cleaned_name = name.strip()
         if not cleaned_name:
             raise ValueError("Name must not be empty.")
 
         if self.app is None:
-            self.register_opencv(cleaned_name, detection)
+            self.register_opencv(cleaned_name, detection, age, gender)
             return
 
         if np.linalg.norm(detection.embedding) == 0:
@@ -227,14 +259,22 @@ class FaceRecognitionService:
         self.profiles.append(FaceProfile(name=cleaned_name, embeddings=[detection.embedding]))
         self.save_profiles()
 
-    def register_opencv(self, name: str, detection: FaceDetection) -> None:
+    def register_opencv(
+        self,
+        name: str,
+        detection: FaceDetection,
+        age: int | None = None,
+        gender: str | None = None,
+    ) -> None:
         if self.opencv_recognizer is None:
             raise RuntimeError("OpenCV Face recognizer is not available.")
 
         if detection.crop is None:
             raise RuntimeError("No face crop is available for registration.")
 
-        self.opencv_samples.append(OpenCvFaceSample(name=name, image=detection.crop))
+        self.opencv_samples.append(
+            OpenCvFaceSample(name=name, image=detection.crop, age=age, gender=gender)
+        )
         self._train_opencv_recognizer()
         self.save_opencv_profiles()
 
