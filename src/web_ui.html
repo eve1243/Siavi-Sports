@@ -192,6 +192,11 @@
         font-weight: 900;
       }
 
+      button:disabled {
+        cursor: not-allowed;
+        opacity: 0.55;
+      }
+
       button.secondary {
         color: #1769e0;
         border: 1px solid rgba(23, 105, 224, 0.24);
@@ -293,7 +298,11 @@
           <section id="sign-in-view" class="form">
             <div>
               <h2 data-i18n="signInTitle">Sign in with FaceID</h2>
-              <p data-i18n="signInCopy">Look into the camera, then sign in with your registered face.</p>
+              <p data-i18n="signInCopy">Look into the camera, choose a recognized face, then sign in.</p>
+            </div>
+            <div class="field">
+              <label for="recognized-face" data-i18n="recognizedFaceLabel">Recognized face</label>
+              <select id="recognized-face"></select>
             </div>
             <button id="sign-in-button" type="button" data-i18n="signInButton">Sign in</button>
           </section>
@@ -324,7 +333,7 @@
               </select>
             </div>
 
-            <button id="register-button" type="button" data-i18n="registerButton">Register and sign in</button>
+            <button id="register-button" type="button" data-i18n="registerButton">Register profile</button>
           </section>
 
           <div id="message" class="message">Waiting for camera...</div>
@@ -379,7 +388,8 @@
           signIn: "Sign in",
           register: "Register",
           signInTitle: "Sign in with FaceID",
-          signInCopy: "Look into the camera, then sign in with your registered face.",
+          signInCopy: "Look into the camera, choose a recognized face, then sign in.",
+          recognizedFaceLabel: "Recognized face",
           signInButton: "Sign in",
           registerTitle: "Create profile",
           registerCopy: "Enter your profile details and keep your face visible.",
@@ -390,7 +400,7 @@
           genderMale: "Male",
           genderDiverse: "Diverse",
           genderPrivate: "Prefer not to say",
-          registerButton: "Register and sign in",
+          registerButton: "Register profile",
           statusTitle: "Status",
           trainingCopy: "This area is visible only after FaceID login.",
           activeUser: "Active user",
@@ -412,6 +422,8 @@
           gestures: "Gestures",
           profiles: "Profiles",
           faceIdReady: "FaceID ready",
+          confidence: "Confidence",
+          noRecognizedFace: "No recognized face above 60%",
         },
         pt: {
           appTitle: "Treino com FaceID",
@@ -421,7 +433,8 @@
           signIn: "Entrar",
           register: "Registar",
           signInTitle: "Entrar com FaceID",
-          signInCopy: "Olha para a camara e entra com o rosto registado.",
+          signInCopy: "Olha para a camara, escolhe um rosto reconhecido e entra.",
+          recognizedFaceLabel: "Rosto reconhecido",
           signInButton: "Entrar",
           registerTitle: "Criar perfil",
           registerCopy: "Preenche os dados e mantem o rosto visivel.",
@@ -432,7 +445,7 @@
           genderMale: "Masculino",
           genderDiverse: "Diverso",
           genderPrivate: "Prefiro nao dizer",
-          registerButton: "Registar e entrar",
+          registerButton: "Registar perfil",
           statusTitle: "Estado",
           trainingCopy: "Esta area so aparece depois do login FaceID.",
           activeUser: "Utilizador ativo",
@@ -454,6 +467,8 @@
           gestures: "Gestos",
           profiles: "Perfis",
           faceIdReady: "FaceID pronto",
+          confidence: "Confianca",
+          noRecognizedFace: "Nenhum rosto reconhecido acima de 60%",
         },
         sr: {
           appTitle: "FaceID trening",
@@ -463,7 +478,8 @@
           signIn: "Prijava",
           register: "Registracija",
           signInTitle: "Prijava preko FaceID",
-          signInCopy: "Pogledaj u kameru i prijavi se registrovanim licem.",
+          signInCopy: "Pogledaj u kameru, izaberi prepoznato lice i prijavi se.",
+          recognizedFaceLabel: "Prepoznato lice",
           signInButton: "Prijavi se",
           registerTitle: "Napravi profil",
           registerCopy: "Unesi podatke i drzi lice vidljivo.",
@@ -474,7 +490,7 @@
           genderMale: "Muski",
           genderDiverse: "Razlicito",
           genderPrivate: "Ne zelim da kazem",
-          registerButton: "Registruj i prijavi se",
+          registerButton: "Registruj profil",
           statusTitle: "Status",
           trainingCopy: "Ovaj deo je vidljiv samo posle FaceID prijave.",
           activeUser: "Aktivni korisnik",
@@ -496,6 +512,8 @@
           gestures: "Gestovi",
           profiles: "Profili",
           faceIdReady: "FaceID spreman",
+          confidence: "Pouzdanost",
+          noRecognizedFace: "Nema prepoznatog lica iznad 60%",
         },
       };
 
@@ -508,9 +526,11 @@
       const ageInput = document.querySelector("#age");
       const genderSelect = document.querySelector("#gender");
       const languageSelect = document.querySelector("#language-select");
+      const recognizedFaceSelect = document.querySelector("#recognized-face");
       const statusList = document.querySelector("#status-list");
       const signInTab = document.querySelector("#sign-in-tab");
       const registerTab = document.querySelector("#register-tab");
+      const signInButton = document.querySelector("#sign-in-button");
       const signInView = document.querySelector("#sign-in-view");
       const registerView = document.querySelector("#register-view");
       const authPanel = document.querySelector("#auth-panel");
@@ -523,6 +543,14 @@
         return translations[language][key] || translations.en[key] || key;
       }
 
+      function escapeHtml(value) {
+        return String(value)
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;");
+      }
+
       function applyLanguage() {
         document.documentElement.lang = language;
         languageSelect.value = language;
@@ -531,6 +559,7 @@
         });
         nameInput.placeholder = t("nameLabel");
         ageInput.placeholder = t("ageLabel");
+        renderRecognizedFaces(lastStatus);
         renderStatus(lastStatus);
       }
 
@@ -566,12 +595,14 @@
           : t("noProfiles");
         currentGesture.textContent = gestureText;
         cameraFps.textContent = status.fps;
+        renderRecognizedFaces(status);
 
         statusList.innerHTML = `
           <div><strong>${t("faceIdReady")}</strong><span>${status.recognitionReady ? t("yes") : "no"}</span></div>
           <div><strong>${t("faces")}</strong><span>${status.faceCount}</span></div>
           <div><strong>${t("gestures")}</strong><span>${gestureText}</span></div>
           <div><strong>${t("profiles")}</strong><span>${profileText}</span></div>
+          <div><strong>${t("confidence")}</strong><span>&gt; ${Math.round(status.minRecognitionConfidence * 100)}%</span></div>
         `;
 
         if (status.error) {
@@ -580,6 +611,35 @@
           message.textContent = `${t("signedIn")}: ${status.authenticatedName}`;
         } else {
           message.textContent = t("waiting");
+        }
+      }
+
+      function renderRecognizedFaces(status) {
+        if (!status) {
+          recognizedFaceSelect.innerHTML = `<option value="">${t("noRecognizedFace")}</option>`;
+          signInButton.disabled = true;
+          return;
+        }
+
+        const candidates = status.signInCandidates || [];
+        if (!candidates.length) {
+          recognizedFaceSelect.innerHTML = `<option value="">${t("noRecognizedFace")}</option>`;
+          signInButton.disabled = true;
+          return;
+        }
+
+        const currentValue = recognizedFaceSelect.value;
+        signInButton.disabled = false;
+        recognizedFaceSelect.innerHTML = candidates
+          .map((face) => {
+            const score = Math.round(face.similarity * 100);
+            const name = escapeHtml(face.name);
+            return `<option value="${name}">${name} (${score}%)</option>`;
+          })
+          .join("");
+
+        if (candidates.some((face) => face.name === currentValue)) {
+          recognizedFaceSelect.value = currentValue;
         }
       }
 
@@ -615,10 +675,16 @@
       }
 
       async function signIn() {
+        const name = recognizedFaceSelect.value;
+        if (!name) {
+          message.textContent = t("noRecognizedFace");
+          return;
+        }
+
         const response = await fetch("/api/sign-in", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({}),
+          body: JSON.stringify({ name }),
         });
         const result = await response.json();
         message.textContent = result.message;

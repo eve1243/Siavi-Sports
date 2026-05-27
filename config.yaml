@@ -8,7 +8,8 @@ face:
   enabled: true
   model_name: buffalo_l
   detection_size: [640, 640]
-  recognition_threshold: 0.38
+  min_detection_confidence: 0.6
+  recognition_threshold: 0.6
   opencv_threshold: 72.0
   database_path: data/faces.json
   providers:

@@ -15,6 +15,7 @@ from pydantic import BaseModel
 
 from app_config import load_config
 from camera import CameraError, Webcam
+from domain import FaceDetection
 from face_recognition_service import FaceRecognitionService
 from gesture_service import GestureService
 from overlay import draw_faces, draw_gestures, draw_status
@@ -46,6 +47,14 @@ class RecognitionEngine:
         self.fps = 0.0
         self.placeholder_jpeg = self._create_placeholder_frame("Waiting for camera permission")
         self.active_user: str | None = None
+
+    @property
+    def min_face_confidence(self) -> float:
+        return self.config.face.min_detection_confidence
+
+    @property
+    def min_recognition_confidence(self) -> float:
+        return self.config.face.recognition_threshold
 
     def start(self) -> None:
         if self.running:
@@ -125,8 +134,18 @@ class RecognitionEngine:
                     "name": face.name,
                     "confidence": face.confidence,
                     "similarity": face.similarity,
+                    "canSignIn": self._can_sign_in_with_face(face),
                 }
                 for face in self.latest_faces
+            ]
+            sign_in_candidates = [
+                {
+                    "name": face.name,
+                    "confidence": face.confidence,
+                    "similarity": face.similarity,
+                }
+                for face in self.latest_faces
+                if self._can_sign_in_with_face(face)
             ]
             gestures = [
                 {
@@ -137,13 +156,6 @@ class RecognitionEngine:
                 for gesture in self.latest_gestures
             ]
 
-            authenticated = next(
-                (face.name for face in self.latest_faces if face.name not in {"unknown", "face"}),
-                None,
-            )
-            if authenticated:
-                self.active_user = authenticated
-
             return {
                 "authenticated": self.active_user is not None,
                 "authenticatedName": self.active_user,
@@ -153,8 +165,11 @@ class RecognitionEngine:
                 "fps": round(self.fps, 1),
                 "gestureCount": len(self.latest_gestures),
                 "gestures": gestures,
+                "minFaceConfidence": self.min_face_confidence,
+                "minRecognitionConfidence": self.min_recognition_confidence,
                 "recognitionReady": self.face_service.recognition_ready,
                 "profiles": self.face_service.registered_profiles,
+                "signInCandidates": sign_in_candidates,
             }
 
     def register(self, name: str, age: int | None, gender: str | None) -> tuple[bool, str]:
@@ -171,29 +186,35 @@ class RecognitionEngine:
         except Exception as error:
             return False, str(error)
 
-        self.active_user = name
-        return True, f"{name} has been registered and signed in."
+        return True, f"{name} has been registered. Select the recognized face to sign in."
 
     def sign_in(self, requested_name: str | None = None) -> tuple[bool, str]:
         with self.lock:
             faces = list(self.latest_faces)
 
         recognized = next(
-            (face.name for face in faces if face.name not in {"unknown", "face"}),
+            (face for face in faces if self._can_sign_in_with_face(face)),
             None,
         )
 
         if recognized is None:
-            return False, "No registered face recognized yet."
+            return False, "No registered face recognized above 60% confidence yet."
 
-        if requested_name and requested_name.casefold() != recognized.casefold():
-            return False, f"Recognized {recognized}, not {requested_name}."
+        if requested_name and requested_name.casefold() != recognized.name.casefold():
+            return False, f"Recognized {recognized.name}, not {requested_name}."
 
-        self.active_user = recognized
-        return True, f"Welcome back, {recognized}."
+        self.active_user = recognized.name
+        return True, f"Welcome back, {recognized.name}."
 
     def logout(self) -> None:
         self.active_user = None
+
+    def _can_sign_in_with_face(self, face: FaceDetection) -> bool:
+        return (
+            face.name not in {"unknown", "face"}
+            and face.confidence > self.min_face_confidence
+            and face.similarity > self.min_recognition_confidence
+        )
 
     def _create_placeholder_frame(self, text: str) -> bytes:
         frame = np.zeros((720, 1280, 3), dtype=np.uint8)

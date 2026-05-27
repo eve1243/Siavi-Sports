@@ -162,12 +162,16 @@ class FaceRecognitionService:
 
         detections: list[FaceDetection] = []
         for face in self.app.get(frame):
+            confidence = float(face.det_score)
+            if confidence <= self.config.min_detection_confidence:
+                continue
+
             embedding = np.asarray(face.embedding, dtype=np.float32)
             name, similarity = self.match_embedding(embedding)
             detections.append(
                 FaceDetection(
                     box=normalize_box(face.bbox),
-                    confidence=float(face.det_score),
+                    confidence=confidence,
                     embedding=embedding,
                     name=name,
                     similarity=similarity,

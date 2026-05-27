@@ -42,7 +42,8 @@ class FaceConfig:
     enabled: bool = True
     model_name: str = "buffalo_l"
     detection_size: tuple[int, int] = (640, 640)
-    recognition_threshold: float = 0.38
+    min_detection_confidence: float = 0.6
+    recognition_threshold: float = 0.6
     opencv_threshold: float = 72.0
     database_path: str = "data/faces.json"
     providers: list[str] = field(default_factory=lambda: ["CPUExecutionProvider"])
