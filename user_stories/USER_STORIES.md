@@ -1,194 +1,251 @@
 # User Stories - SIAVIBioFit
 
-Diese User Stories basieren auf der Aufgabenstellung aus "Assessment Assignment #3: Evaluation of Interfaces with Gesture and Voice Interaction Systems with Facial Recognition".
+Diese User Stories basieren auf der Aufgabenstellung aus `Assessment Assignment #3 - Evaluation of Interfaces with Gesture and Voice Interaction Systems with Facial Recognition` und auf dem aktuellen Projektstand.
 
-## US-01 - Erstregistrierung
+## Epic 1 - Registrierung und Face Recognition
 
-Als neuer Benutzer moechte ich mich mit Name, Alter und Geschlecht registrieren, damit die App ein persoenliches Profil fuer mich anlegen kann.
+### US-01 - Erstregistrierung
+
+Als neuer Benutzer möchte ich Name, Alter und Geschlecht eingeben, damit die App ein persönliches Profil für mich anlegen kann.
 
 Akzeptanzkriterien:
 - Der Benutzer kann Name, Alter und Geschlecht eingeben.
-- Die App speichert die Profildaten lokal.
+- Ohne sichtbares Gesicht kann keine Registrierung abgeschlossen werden.
+- Die Profildaten werden lokal gespeichert.
 - Neue Benutzer starten auf Level 1.
-- Ohne sichtbares Gesicht darf keine FaceID-Registrierung abgeschlossen werden.
 
-## US-02 - Gesicht registrieren
+Status: Teilweise umgesetzt. Name, Alter, Geschlecht und Gesichtsdaten werden gespeichert; Level 1 fehlt noch.
 
-Als Benutzer moechte ich mein Gesicht registrieren, damit die App mich spaeter wiedererkennen kann.
+### US-02 - Gesicht registrieren
+
+Als Benutzer möchte ich mein Gesicht registrieren, damit die App mich später automatisch wiedererkennen kann.
 
 Akzeptanzkriterien:
 - Die Kamera erkennt ein sichtbares Gesicht.
-- Das Gesicht wird dem eingegebenen Benutzerprofil zugeordnet.
-- Die Registrierung funktioniert lokal ohne Cloud-Dienst.
-- Die App zeigt eine verstaendliche Fehlermeldung, wenn kein Gesicht erkannt wird.
+- Das Gesicht wird dem richtigen Benutzerprofil zugeordnet.
+- Mehrere Personen können getrennt registriert werden.
+- Wird dieselbe Person erneut registriert, wird ein weiteres Face-Sample gespeichert.
+- Die Daten werden lokal in einer Datenbank gespeichert.
 
-## US-03 - Gesichtserkennung beim Start
+Status: Umgesetzt.
 
-Als registrierter Benutzer moechte ich beim Oeffnen der App durch Gesichtserkennung erkannt werden, damit ich mein Profil schnell auswaehlen kann.
+### US-03 - Automatische Gesichtserkennung
 
-Akzeptanzkriterien:
-- Die App erkennt registrierte Gesichter im Kamerabild.
-- Ein Gesicht gilt nur als erkannt, wenn die Confidence groesser als 60% ist.
-- Die App zeigt erkannte Benutzer als Login-Auswahl an.
-- Die App loggt den Benutzer nicht automatisch ein.
-
-## US-04 - Manueller FaceID-Login
-
-Als registrierter Benutzer moechte ich nach erkannter FaceID selbst auf "Einloggen" klicken, damit ich die Kontrolle ueber den Login habe.
+Als registrierter Benutzer möchte ich beim Öffnen der App automatisch erkannt werden, damit ich schnell mein Profil nutzen kann.
 
 Akzeptanzkriterien:
-- Der Login-Button ist nur sinnvoll nutzbar, wenn ein erkanntes Profil ausgewaehlt wurde.
-- Die App loggt nur das ausgewaehlte erkannte Profil ein.
-- Wenn kein Profil ueber 60% erkannt wurde, erscheint eine Fehlermeldung.
-- Nach erfolgreichem Login wird der geschuetzte Trainingsbereich angezeigt.
+- Die App erkennt registrierte Gesichter im Livebild.
+- Erkannte Personen werden intern als Login-Kandidaten geführt.
+- Die App zeigt den erkannten Namen im Kamerabild.
+- Recognition-Scores laufen im Hintergrund und werden nicht als Prozentwert angezeigt.
 
-## US-05 - Persoenliche Bio anzeigen
+Status: Umgesetzt.
 
-Als eingeloggter Benutzer moechte ich meine persoenlichen Informationen sehen, damit die App personalisiert wirkt.
+### US-04 - FaceID-Login
+
+Als registrierter Benutzer möchte ich mich mit meinem erkannten Gesicht einloggen, damit nur mein persönlicher Trainingsbereich geöffnet wird.
+
+Akzeptanzkriterien:
+- Ein erkannter Name kann zum Login verwendet werden.
+- Der Login-Button funktioniert nur mit erkanntem Profil.
+- Nach erfolgreichem Login wird der Trainingsbereich angezeigt.
+- Bei nicht erkanntem Gesicht erscheint eine verständliche Meldung.
+
+Status: Umgesetzt.
+
+## Epic 2 - Persönliches Profil und Fortschritt
+
+### US-05 - Persönliche Bio anzeigen
+
+Als eingeloggter Benutzer möchte ich meine persönlichen Informationen sehen, damit die App personalisiert wirkt.
 
 Akzeptanzkriterien:
 - Die App zeigt Name, Alter und Geschlecht an.
 - Die App zeigt den aktuellen Fitness-Level an.
 - Die App zeigt den aktuellen Score an.
-- Die App zeigt an, wie oft sich der Benutzer bereits eingeloggt hat.
+- Die App zeigt die Anzahl der bisherigen Logins an.
 
-## US-06 - Login-Zaehler
+Status: Teilweise umgesetzt. Aktiver Benutzer wird angezeigt; Alter, Geschlecht, Level, Score und Login-Zähler fehlen im Trainingsbereich.
 
-Als Benutzer moechte ich, dass die App meine Logins zaehlt, damit mein Fortschritt nachvollziehbar ist.
+### US-06 - Login-Zähler speichern
 
-Akzeptanzkriterien:
-- Jeder erfolgreiche Login erhoeht den Login-Zaehler des Profils.
-- Der Login-Zaehler wird gespeichert.
-- Der Login-Zaehler wird im Benutzerbereich angezeigt.
-
-## US-07 - Fitness-Level
-
-Als Benutzer moechte ich ein Fitness-Level haben, das nach erfolgreich abgeschlossenen Trainings steigt, damit ich Fortschritt sehe.
+Als Benutzer möchte ich, dass meine Logins gezählt werden, damit meine Nutzung nachvollziehbar ist.
 
 Akzeptanzkriterien:
-- Jeder Benutzer startet bei Level 1.
-- Nach Abschluss eines kompletten Trainingssets steigt das Level.
-- Hoehere Level verlangen mehr Wiederholungen.
-- Das Level wird gespeichert und beim naechsten Login geladen.
+- Jeder erfolgreiche Login erhöht den Login-Zähler des Profils.
+- Der Login-Zähler wird dauerhaft gespeichert.
+- Der Login-Zähler wird im Trainingsbereich angezeigt.
 
-## US-08 - Wiederholungsziel pro Level
+Status: Fehlt.
 
-Als Benutzer moechte ich ein Wiederholungsziel pro Uebung sehen, damit ich weiss, wann ein Set abgeschlossen ist.
+### US-07 - Score speichern
+
+Als Benutzer möchte ich Punkte für erfolgreich erkannte Übungen erhalten, damit meine Leistung messbar wird.
 
 Akzeptanzkriterien:
-- Level 1 startet zum Beispiel mit 5 Wiederholungen pro Uebung.
-- Pro Level steigt das Ziel um 5 Wiederholungen oder wird durch einen Trainerwert gesetzt.
+- Jede gültige Wiederholung erhöht den Score oder trägt zum Score bei.
+- Ein abgeschlossenes Set gibt zusätzliche Punkte.
+- Der Score wird dauerhaft pro Benutzer gespeichert.
+- Der Score wird nach dem Login wieder geladen.
+
+Status: Fehlt.
+
+### US-08 - Fitness-Level erhöhen
+
+Als Benutzer möchte ich nach abgeschlossenen Übungssets im Level steigen, damit die App herausfordernder wird.
+
+Akzeptanzkriterien:
+- Jeder Benutzer startet auf Level 1.
+- Nach Abschluss eines kompletten Sets steigt das Level.
+- Das Level wird pro Benutzer gespeichert.
+- Das aktuelle Level wird im Trainingsbereich angezeigt.
+
+Status: Fehlt.
+
+### US-09 - Wiederholungsziel pro Level
+
+Als Benutzer möchte ich ein Wiederholungsziel sehen, damit ich weiß, wann ein Set abgeschlossen ist.
+
+Akzeptanzkriterien:
+- Level 1 startet mit 5 Wiederholungen.
+- Pro Level steigt das Ziel um 5 Wiederholungen.
+- Alternativ kann ein Trainerwert gesetzt werden.
 - Die App zeigt aktuelle Wiederholungen und Zielwiederholungen an.
 
-## US-09 - Uebungsauswahl
+Status: Fehlt.
 
-Als Benutzer moechte ich zwischen mehreren Uebungen waehlen koennen, damit ich mein Training steuern kann.
+## Epic 3 - Übungen und Gestensteuerung
 
-Akzeptanzkriterien:
-- Die App bietet mindestens drei Uebungen an.
-- Die App enthaelt Hand Weight Lifting.
-- Die App enthaelt Jumping Tracks.
-- Die App enthaelt eine dritte selbst gewaehlt Uebung, zum Beispiel Arm Raises oder Push-ups.
-- Alternativ kann ein vordefinierter sequentieller Trainingsplan gestartet werden.
+### US-10 - Übungsauswahl
 
-## US-10 - Hand Weight Lifting erkennen
-
-Als Benutzer moechte ich Handgewicht-Hebe-Bewegungen ausfuehren, damit die App jede Wiederholung erkennt und zaehlt.
+Als Benutzer möchte ich Übungen auswählen oder einem Trainingsplan folgen, damit ich mein Training starten kann.
 
 Akzeptanzkriterien:
-- Die App erkennt die relevante Hebe-Geste ueber Kamera/Gestenerkennung.
-- Jede gueltige Wiederholung wird genau einmal gezaehlt.
-- Ungueltige oder unvollstaendige Bewegungen werden nicht als Wiederholung gezaehlt.
-- Der aktuelle Zaehler wird waehrend der Uebung angezeigt.
+- Die App bietet mindestens drei Übungen an.
+- Die App enthält Hand Weight Lifting.
+- Die App enthält Jumping Tracks.
+- Die App enthält eine dritte Gruppenübung, empfohlen: Arm Raises.
+- Alternativ kann die App einen sequentiellen Trainingsplan anbieten.
 
-## US-11 - Jumping Tracks erkennen
+Status: Teilweise umgesetzt. Es gibt Platzhalter-Karten, aber noch keine echte Übungslogik.
 
-Als Benutzer moechte ich Spruenge auf der Stelle machen, damit die App meine Spruenge erkennt und zaehlt.
+### US-11 - Hand Weight Lifting zählen
+
+Als Benutzer möchte ich Hand Weight Lifting ausführen, damit die App jede gültige Wiederholung erkennt und zählt.
+
+Akzeptanzkriterien:
+- Die App erkennt die passende Hebebewegung.
+- Jede vollständige Wiederholung wird genau einmal gezählt.
+- Unvollständige Bewegungen werden nicht gezählt.
+- Fortschritt und Ziel werden während der Übung angezeigt.
+
+Status: Fehlt.
+
+### US-12 - Jumping Tracks zählen
+
+Als Benutzer möchte ich auf der Stelle springen, damit die App meine Sprünge erkennt und zählt.
 
 Akzeptanzkriterien:
 - Die App erkennt Sprungbewegungen im Kamerabild.
-- Jeder gueltige Sprung wird als Wiederholung gezaehlt.
-- Die App zeigt Fortschritt und Ziel der Uebung an.
+- Jeder gültige Sprung wird genau einmal gezählt.
+- Fortschritt und Ziel werden während der Übung angezeigt.
+- Nach Erreichen des Ziels wird das Set abgeschlossen.
 
-## US-12 - Dritte Uebung erkennen
+Status: Fehlt.
 
-Als Benutzer moechte ich eine dritte Uebung ausfuehren, damit die App ein vollstaendigeres Training bietet.
+### US-13 - Dritte Übung zählen
 
-Akzeptanzkriterien:
-- Die Gruppe waehlt eine dritte Uebung, zum Beispiel Arm Raises oder Push-ups.
-- Die App erkennt die Bewegung der gewaehlten Uebung.
-- Jede gueltige Wiederholung wird gezaehlt.
-- Die Uebung ist in der Uebungsauswahl sichtbar.
-
-## US-13 - Trainingsfortschritt speichern
-
-Als Benutzer moechte ich, dass mein Trainingsfortschritt gespeichert wird, damit ich spaeter weitermachen kann.
+Als Projektgruppe möchten wir eine dritte Übung definieren, damit die App die Aufgabenstellung vollständig erfüllt.
 
 Akzeptanzkriterien:
-- Die App speichert Level, Score, Login-Zaehler und abgeschlossene Uebungen.
-- Die Daten werden beim naechsten Login wieder geladen.
-- Fortschritt wird pro Benutzerprofil getrennt gespeichert.
+- Die Gruppe wählt eine dritte Übung, z. B. Arm Raises.
+- Die App erkennt die Bewegung der Übung.
+- Jede gültige Wiederholung wird gezählt.
+- Die Übung erscheint in der Übungsauswahl oder im Trainingsplan.
 
-## US-14 - Score-System
+Status: Fehlt.
 
-Als Benutzer moechte ich Punkte fuer abgeschlossene Uebungen erhalten, damit meine Leistung messbar wird.
+### US-14 - Trainingsstatus anzeigen
 
-Akzeptanzkriterien:
-- Erfolgreiche Wiederholungen oder abgeschlossene Sets erhoehen den Score.
-- Der Score wird im Benutzerbereich angezeigt.
-- Der Score wird dauerhaft gespeichert.
-
-## US-15 - Benutzerfreundliche Rueckmeldungen
-
-Als Benutzer moechte ich klare Meldungen erhalten, damit ich weiss, was die App gerade erkennt oder von mir erwartet.
+Als Benutzer möchte ich während des Trainings klare Rückmeldungen bekommen, damit ich weiß, ob meine Bewegung erkannt wurde.
 
 Akzeptanzkriterien:
-- Die App zeigt verstaendliche Fehler bei fehlender Kamera, fehlendem Gesicht oder nicht erkanntem Profil.
-- Die App zeigt waehrend Uebungen den aktuellen Zustand an.
-- Meldungen sind kurz, eindeutig und fuer normale Benutzer verstaendlich.
+- Die App zeigt die aktuelle Übung an.
+- Die App zeigt aktuelle Wiederholungen und Ziel an.
+- Die App zeigt an, wenn eine Wiederholung gezählt wurde.
+- Die App zeigt an, wenn ein Set abgeschlossen ist.
 
-## US-16 - Gesten-Feedback im Kamerabild
+Status: Fehlt.
 
-Als Benutzer moechte ich im Kamerabild sehen, welche Gesten erkannt werden, damit ich meine Bewegungen korrigieren kann.
+## Epic 4 - Regeln, Anpassung und Usability
 
-Akzeptanzkriterien:
-- Erkannte Gesichter werden im Livebild markiert.
-- Erkannte Handgesten werden im Livebild angezeigt.
-- Die Anzeige enthaelt Confidence- oder Statusinformationen.
+### US-15 - Regeln pro Übung anzeigen
 
-## US-17 - Anpassbarkeit
-
-Als Trainer oder Benutzer moechte ich Trainingswerte anpassen koennen, damit die Schwierigkeit zur Person passt.
+Als Benutzer möchte ich klare Regeln für jede Übung sehen, damit ich weiß, wie ich eine Wiederholung korrekt ausführe.
 
 Akzeptanzkriterien:
-- Wiederholungsziele koennen initial gesetzt oder durch Level automatisch gesteigert werden.
-- Die App kann unterschiedliche Benutzerprofile getrennt verwalten.
-- Die App ist so aufgebaut, dass weitere Uebungen spaeter ergaenzt werden koennen.
+- Jede Übung hat eine kurze Regelbeschreibung.
+- Die App erklärt, wann eine Wiederholung zählt.
+- Die Regeln sind im Trainingsbereich sichtbar.
 
-## US-18 - Regeln und Anleitung
+Status: Fehlt.
 
-Als Benutzer moechte ich klare Regeln fuer die Uebungen sehen, damit ich weiss, wie eine Wiederholung korrekt ausgefuehrt wird.
+### US-16 - Benutzerfreundliche Meldungen
 
-Akzeptanzkriterien:
-- Jede Uebung hat eine kurze Regelbeschreibung.
-- Die App erklaert, wann eine Wiederholung zaehlt.
-- Die Regeln sind in der Trainingsansicht erreichbar.
-
-## US-19 - Interface-Bewertung vorbereiten
-
-Als Projektgruppe moechte ich die Interface-Qualitaet anhand von Heuristiken bewerten koennen, damit die Bewertungskriterien der Aufgabe erfuellt werden.
+Als Benutzer möchte ich verständliche Meldungen sehen, damit ich weiß, was die App gerade erwartet.
 
 Akzeptanzkriterien:
-- Es gibt eine kurze Liste relevanter Designprinzipien oder Heuristiken.
-- Die Gesteninteraktion wird in Bezug auf Benutzerfreundlichkeit bewertet.
+- Die App zeigt verständliche Fehler bei Kamera-Problemen.
+- Die App zeigt verständliche Fehler bei fehlendem Gesicht.
+- Die App zeigt verständliche Hinweise während Registrierung, Login und Training.
+- Meldungen sind kurz und eindeutig.
+
+Status: Teilweise umgesetzt.
+
+### US-17 - Customization
+
+Als Trainer oder Benutzer möchte ich Wiederholungsziele anpassen können, damit die Schwierigkeit zur Person passt.
+
+Akzeptanzkriterien:
+- Das Wiederholungsziel kann pro Übung oder Benutzer angepasst werden.
+- Trainerwerte werden gespeichert.
+- Automatische Level-Ziele bleiben möglich.
+
+Status: Fehlt.
+
+### US-18 - Mehrsprachige Oberfläche
+
+Als Benutzer möchte ich die Sprache auswählen können, damit ich die App besser verstehe.
+
+Akzeptanzkriterien:
+- Die App bietet mehrere Sprachen in einem Dropdown an.
+- UI-Texte ändern sich ohne Neustart.
+- Die Auswahl wird lokal gespeichert.
+
+Status: Umgesetzt.
+
+## Epic 5 - Bewertung und Abgabe
+
+### US-19 - Heuristik-Analyse dokumentieren
+
+Als Projektgruppe möchten wir die Interface-Qualität anhand von Heuristiken bewerten, damit die Bewertungskriterien erfüllt werden.
+
+Akzeptanzkriterien:
+- Es gibt eine kurze Liste relevanter Heuristiken oder Designprinzipien.
+- Die Gesteninteraktion wird bewertet.
 - Probleme und Verbesserungen werden dokumentiert.
 
-## US-20 - Abgabe vorbereiten
+Status: Fehlt.
 
-Als Projektgruppe moechte ich die Projektabgabe strukturiert vorbereiten, damit die geforderten Abgabeordner vorhanden sind.
+### US-20 - Abgabestruktur vorbereiten
+
+Als Projektgruppe möchten wir die Abgabeordner vorbereiten, damit die ZIP-Abgabe der Aufgabenstellung entspricht.
 
 Akzeptanzkriterien:
-- Es gibt einen Ordner fuer die ausfuehrbare Version.
-- Es gibt einen Ordner fuer den gesamten Source Code.
-- Es gibt einen Ordner fuer die Praesentation.
+- Es gibt einen Ordner `1_Executable`.
+- Es gibt einen Ordner `2_Source_Code`.
+- Es gibt einen Ordner `3_Presentation`.
 - Die Abgabe kann als ZIP-Datei erstellt werden.
+
+Status: Fehlt.
+
