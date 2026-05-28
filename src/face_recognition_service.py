@@ -61,8 +61,12 @@ class FaceRecognitionService:
             self.import_error = str(error)
             return
 
-        self.app = FaceAnalysis(name=self.config.model_name, providers=self.config.providers)
-        self.app.prepare(ctx_id=-1, det_size=self.config.detection_size)
+        try:
+            self.app = FaceAnalysis(name=self.config.model_name, providers=self.config.providers)
+            self.app.prepare(ctx_id=-1, det_size=self.config.detection_size)
+        except Exception as error:
+            self.import_error = str(error)
+            self.app = None
 
     @property
     def recognition_ready(self) -> bool:
