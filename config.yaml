@@ -1,19 +1,22 @@
 camera:
   index: 0
-  width: 1280
-  height: 720
-  target_fps: 24
+  width: 640
+  height: 480
+  target_fps: 30
+  backend: auto
+  buffer_size: 1
 
 face:
   enabled: true
   model_name: buffalo_l
   detection_size: [640, 640]
   min_detection_confidence: 0.6
-  recognition_threshold: 0.6
+  recognition_threshold: 0.5
   opencv_threshold: 72.0
-  database_path: data/faces.json
+  database_path: data/faces.sqlite
   providers:
     - CPUExecutionProvider
+  process_every_n_frames: 3
 
 gesture:
   enabled: true
@@ -21,6 +24,7 @@ gesture:
   detection_confidence: 0.55
   tracking_confidence: 0.55
   fallback_label: unknown
+  process_every_n_frames: 2
 
 overlay:
   debug: true

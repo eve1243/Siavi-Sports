@@ -422,8 +422,7 @@
           gestures: "Gestures",
           profiles: "Profiles",
           faceIdReady: "FaceID ready",
-          confidence: "Confidence",
-          noRecognizedFace: "No recognized face above 60%",
+          noRecognizedFace: "No recognized face yet",
         },
         pt: {
           appTitle: "Treino com FaceID",
@@ -467,8 +466,7 @@
           gestures: "Gestos",
           profiles: "Perfis",
           faceIdReady: "FaceID pronto",
-          confidence: "Confianca",
-          noRecognizedFace: "Nenhum rosto reconhecido acima de 60%",
+          noRecognizedFace: "Nenhum rosto reconhecido ainda",
         },
         sr: {
           appTitle: "FaceID trening",
@@ -512,8 +510,7 @@
           gestures: "Gestovi",
           profiles: "Profili",
           faceIdReady: "FaceID spreman",
-          confidence: "Pouzdanost",
-          noRecognizedFace: "Nema prepoznatog lica iznad 60%",
+          noRecognizedFace: "Jos nema prepoznatog lica",
         },
       };
 
@@ -602,7 +599,6 @@
           <div><strong>${t("faces")}</strong><span>${status.faceCount}</span></div>
           <div><strong>${t("gestures")}</strong><span>${gestureText}</span></div>
           <div><strong>${t("profiles")}</strong><span>${profileText}</span></div>
-          <div><strong>${t("confidence")}</strong><span>&gt; ${Math.round(status.minRecognitionConfidence * 100)}%</span></div>
         `;
 
         if (status.error) {
@@ -632,9 +628,8 @@
         signInButton.disabled = false;
         recognizedFaceSelect.innerHTML = candidates
           .map((face) => {
-            const score = Math.round(face.similarity * 100);
             const name = escapeHtml(face.name);
-            return `<option value="${name}">${name} (${score}%)</option>`;
+            return `<option value="${name}">${name}</option>`;
           })
           .join("");
 

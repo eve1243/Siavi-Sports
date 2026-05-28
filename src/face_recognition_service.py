@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import io
 import json
+import sqlite3
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -14,6 +16,8 @@ from domain import FaceConfig, FaceDetection, normalize_box
 class FaceProfile:
     name: str
     embeddings: list[np.ndarray]
+    age: int | None = None
+    gender: str | None = None
 
 
 @dataclass
@@ -45,9 +49,11 @@ class FaceRecognitionService:
         )
         self.profiles: list[FaceProfile] = []
         self.database_path = Path(config.database_path)
-        self.opencv_database_path = self.database_path.with_name("opencv_faces.npz")
+        self.legacy_json_path = self._legacy_path("faces.json")
+        self.opencv_database_path = self._legacy_path("opencv_faces.npz")
         self.opencv_samples: list[OpenCvFaceSample] = []
         self.opencv_recognizer = self._create_opencv_recognizer()
+        self._ensure_database()
         self.load_profiles()
         self.load_opencv_profiles()
 
@@ -80,7 +86,7 @@ class FaceRecognitionService:
     @property
     def registered_profiles(self) -> list[dict[str, str | int | None]]:
         profiles: dict[str, dict[str, str | int | None]] = {
-            profile.name: {"name": profile.name, "age": None, "gender": None}
+            profile.name: {"name": profile.name, "age": profile.age, "gender": profile.gender}
             for profile in self.profiles
         }
 
@@ -94,66 +100,72 @@ class FaceRecognitionService:
         return sorted(profiles.values(), key=lambda profile: str(profile["name"]).casefold())
 
     def load_profiles(self) -> None:
-        if not self.database_path.exists():
-            self.profiles = []
-            return
+        with self._connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT profiles.id, profiles.name, profiles.age, profiles.gender, embeddings.embedding
+                FROM profiles
+                LEFT JOIN embeddings ON embeddings.profile_id = profiles.id
+                ORDER BY profiles.name, embeddings.id
+                """
+            ).fetchall()
 
-        with self.database_path.open("r", encoding="utf-8") as file:
-            raw_profiles = json.load(file)
-
-        self.profiles = [
-            FaceProfile(
-                name=str(entry["name"]),
-                embeddings=[np.asarray(value, dtype=np.float32) for value in entry["embeddings"]],
+        by_id: dict[int, FaceProfile] = {}
+        for profile_id, name, age, gender, raw_embedding in rows:
+            profile = by_id.setdefault(
+                int(profile_id),
+                FaceProfile(name=str(name), embeddings=[], age=age, gender=gender),
             )
-            for entry in raw_profiles
-        ]
+            if raw_embedding is not None:
+                profile.embeddings.append(self._array_from_blob(raw_embedding))
+
+        self.profiles = list(by_id.values())
 
     def load_opencv_profiles(self) -> None:
-        if self.opencv_recognizer is None or not self.opencv_database_path.exists():
+        if self.opencv_recognizer is None:
             return
 
-        raw = np.load(self.opencv_database_path, allow_pickle=True)
-        names = [str(name) for name in raw["names"].tolist()]
-        images = [image.astype(np.uint8) for image in raw["images"]]
-        ages = raw["ages"].tolist() if "ages" in raw else [None] * len(names)
-        genders = raw["genders"].tolist() if "genders" in raw else [None] * len(names)
+        with self._connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT profiles.name, profiles.age, profiles.gender, opencv_samples.image
+                FROM opencv_samples
+                JOIN profiles ON profiles.id = opencv_samples.profile_id
+                ORDER BY profiles.name, opencv_samples.id
+                """
+            ).fetchall()
+
         self.opencv_samples = [
             OpenCvFaceSample(
-                name=name,
-                image=image,
+                name=str(name),
+                image=self._array_from_blob(image).astype(np.uint8),
                 age=int(age) if age is not None else None,
                 gender=str(gender) if gender is not None else None,
             )
-            for name, image, age, gender in zip(names, images, ages, genders)
+            for name, age, gender, image in rows
         ]
         self._train_opencv_recognizer()
 
     def save_opencv_profiles(self) -> None:
-        if not self.opencv_samples:
-            return
-
-        self.opencv_database_path.parent.mkdir(parents=True, exist_ok=True)
-        np.savez_compressed(
-            self.opencv_database_path,
-            names=np.asarray([sample.name for sample in self.opencv_samples], dtype=object),
-            images=np.asarray([sample.image for sample in self.opencv_samples], dtype=np.uint8),
-            ages=np.asarray([sample.age for sample in self.opencv_samples], dtype=object),
-            genders=np.asarray([sample.gender for sample in self.opencv_samples], dtype=object),
-        )
+        with self._connect() as connection:
+            connection.execute("DELETE FROM opencv_samples")
+            for sample in self.opencv_samples:
+                profile_id = self._upsert_profile(connection, sample.name, sample.age, sample.gender)
+                connection.execute(
+                    "INSERT INTO opencv_samples (profile_id, image) VALUES (?, ?)",
+                    (profile_id, self._array_to_blob(sample.image)),
+                )
 
     def save_profiles(self) -> None:
-        self.database_path.parent.mkdir(parents=True, exist_ok=True)
-        serialized = [
-            {
-                "name": profile.name,
-                "embeddings": [embedding.astype(float).tolist() for embedding in profile.embeddings],
-            }
-            for profile in self.profiles
-        ]
-
-        with self.database_path.open("w", encoding="utf-8") as file:
-            json.dump(serialized, file, indent=2)
+        with self._connect() as connection:
+            connection.execute("DELETE FROM embeddings")
+            for profile in self.profiles:
+                profile_id = self._upsert_profile(connection, profile.name, profile.age, profile.gender)
+                for embedding in profile.embeddings:
+                    connection.execute(
+                        "INSERT INTO embeddings (profile_id, embedding) VALUES (?, ?)",
+                        (profile_id, self._array_to_blob(embedding.astype(np.float32))),
+                    )
 
     def detect(self, frame: np.ndarray) -> list[FaceDetection]:
         if not self.config.enabled:
@@ -186,10 +198,11 @@ class FaceRecognitionService:
 
     def detect_with_opencv(self, frame: np.ndarray) -> list[FaceDetection]:
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        gray = cv2.equalizeHist(gray)
         faces = self.haar_detector.detectMultiScale(
             gray,
-            scaleFactor=1.08,
-            minNeighbors=5,
+            scaleFactor=1.05,
+            minNeighbors=6,
             minSize=(64, 64),
         )
 
@@ -215,11 +228,18 @@ class FaceRecognitionService:
         best_similarity = 0.0
 
         for profile in self.profiles:
-            for known_embedding in profile.embeddings:
-                similarity = _cosine_similarity(embedding, known_embedding)
-                if similarity > best_similarity:
-                    best_name = profile.name
-                    best_similarity = similarity
+            similarities = [
+                _cosine_similarity(embedding, known_embedding)
+                for known_embedding in profile.embeddings
+            ]
+            if not similarities:
+                continue
+
+            top_matches = sorted(similarities, reverse=True)[:3]
+            similarity = float(np.mean(top_matches))
+            if similarity > best_similarity:
+                best_name = profile.name
+                best_similarity = similarity
 
         if best_similarity < self.config.recognition_threshold:
             return "unknown", best_similarity
@@ -261,10 +281,14 @@ class FaceRecognitionService:
         for profile in self.profiles:
             if profile.name.casefold() == cleaned_name.casefold():
                 profile.embeddings.append(detection.embedding)
+                profile.age = age
+                profile.gender = gender
                 self.save_profiles()
                 return
 
-        self.profiles.append(FaceProfile(name=cleaned_name, embeddings=[detection.embedding]))
+        self.profiles.append(
+            FaceProfile(name=cleaned_name, embeddings=[detection.embedding], age=age, gender=gender)
+        )
         self.save_profiles()
 
     def register_opencv(
@@ -285,6 +309,125 @@ class FaceRecognitionService:
         )
         self._train_opencv_recognizer()
         self.save_opencv_profiles()
+
+    def _ensure_database(self) -> None:
+        self.database_path.parent.mkdir(parents=True, exist_ok=True)
+        with self._connect() as connection:
+            connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS profiles (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL UNIQUE COLLATE NOCASE,
+                    age INTEGER,
+                    gender TEXT,
+                    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                )
+                """
+            )
+            connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS embeddings (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    profile_id INTEGER NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+                    embedding BLOB NOT NULL,
+                    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                )
+                """
+            )
+            connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS opencv_samples (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    profile_id INTEGER NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+                    image BLOB NOT NULL,
+                    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                )
+                """
+            )
+
+            has_profiles = connection.execute("SELECT 1 FROM profiles LIMIT 1").fetchone()
+            if not has_profiles:
+                self._import_legacy_json(connection)
+                self._import_legacy_opencv(connection)
+
+    def _connect(self) -> sqlite3.Connection:
+        connection = sqlite3.connect(self.database_path)
+        connection.execute("PRAGMA foreign_keys = ON")
+        return connection
+
+    def _legacy_path(self, filename: str) -> Path:
+        if self.database_path.suffix == ".json" and filename == "faces.json":
+            return self.database_path
+        return self.database_path.with_name(filename)
+
+    def _upsert_profile(
+        self,
+        connection: sqlite3.Connection,
+        name: str,
+        age: int | None = None,
+        gender: str | None = None,
+    ) -> int:
+        connection.execute(
+            """
+            INSERT INTO profiles (name, age, gender)
+            VALUES (?, ?, ?)
+            ON CONFLICT(name) DO UPDATE SET
+                age = COALESCE(excluded.age, profiles.age),
+                gender = COALESCE(excluded.gender, profiles.gender)
+            """,
+            (name, age, gender),
+        )
+        row = connection.execute("SELECT id FROM profiles WHERE name = ?", (name,)).fetchone()
+        if row is None:
+            raise RuntimeError(f"Could not save profile for {name}.")
+        return int(row[0])
+
+    def _import_legacy_json(self, connection: sqlite3.Connection) -> None:
+        if not self.legacy_json_path.exists() or self.legacy_json_path.suffix != ".json":
+            return
+
+        with self.legacy_json_path.open("r", encoding="utf-8") as file:
+            raw_profiles = json.load(file)
+
+        for entry in raw_profiles:
+            profile_id = self._upsert_profile(connection, str(entry["name"]))
+            for value in entry.get("embeddings", []):
+                embedding = np.asarray(value, dtype=np.float32)
+                connection.execute(
+                    "INSERT INTO embeddings (profile_id, embedding) VALUES (?, ?)",
+                    (profile_id, self._array_to_blob(embedding)),
+                )
+
+    def _import_legacy_opencv(self, connection: sqlite3.Connection) -> None:
+        if not self.opencv_database_path.exists():
+            return
+
+        raw = np.load(self.opencv_database_path, allow_pickle=True)
+        names = [str(name) for name in raw["names"].tolist()]
+        images = [image.astype(np.uint8) for image in raw["images"]]
+        ages = raw["ages"].tolist() if "ages" in raw else [None] * len(names)
+        genders = raw["genders"].tolist() if "genders" in raw else [None] * len(names)
+
+        for name, image, age, gender in zip(names, images, ages, genders):
+            profile_id = self._upsert_profile(
+                connection,
+                name,
+                int(age) if age is not None else None,
+                str(gender) if gender is not None else None,
+            )
+            connection.execute(
+                "INSERT INTO opencv_samples (profile_id, image) VALUES (?, ?)",
+                (profile_id, self._array_to_blob(image)),
+            )
+
+    def _array_to_blob(self, array: np.ndarray) -> bytes:
+        buffer = io.BytesIO()
+        np.save(buffer, array, allow_pickle=False)
+        return buffer.getvalue()
+
+    def _array_from_blob(self, blob: bytes) -> np.ndarray:
+        buffer = io.BytesIO(blob)
+        return np.load(buffer, allow_pickle=False)
 
     def _train_opencv_recognizer(self) -> None:
         if self.opencv_recognizer is None or not self.opencv_samples:

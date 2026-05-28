@@ -32,19 +32,22 @@ def load_config(path: str = "config.yaml") -> AppConfig:
     return AppConfig(
         camera=CameraConfig(
             index=int(camera_raw.get("index", 0)),
-            width=int(camera_raw.get("width", 1280)),
-            height=int(camera_raw.get("height", 720)),
-            target_fps=int(camera_raw.get("target_fps", 24)),
+            width=int(camera_raw.get("width", 640)),
+            height=int(camera_raw.get("height", 480)),
+            target_fps=int(camera_raw.get("target_fps", 30)),
+            backend=str(camera_raw.get("backend", "auto")),
+            buffer_size=int(camera_raw.get("buffer_size", 1)),
         ),
         face=FaceConfig(
             enabled=bool(face_raw.get("enabled", True)),
             model_name=str(face_raw.get("model_name", "buffalo_l")),
             detection_size=_as_tuple(face_raw.get("detection_size"), (640, 640)),
             min_detection_confidence=float(face_raw.get("min_detection_confidence", 0.6)),
-            recognition_threshold=float(face_raw.get("recognition_threshold", 0.6)),
+            recognition_threshold=float(face_raw.get("recognition_threshold", 0.5)),
             opencv_threshold=float(face_raw.get("opencv_threshold", 72.0)),
-            database_path=str(face_raw.get("database_path", "data/faces.json")),
+            database_path=str(face_raw.get("database_path", "data/faces.sqlite")),
             providers=list(face_raw.get("providers", ["CPUExecutionProvider"])),
+            process_every_n_frames=max(1, int(face_raw.get("process_every_n_frames", 3))),
         ),
         gesture=GestureConfig(
             enabled=bool(gesture_raw.get("enabled", True)),
@@ -52,6 +55,7 @@ def load_config(path: str = "config.yaml") -> AppConfig:
             detection_confidence=float(gesture_raw.get("detection_confidence", 0.55)),
             tracking_confidence=float(gesture_raw.get("tracking_confidence", 0.55)),
             fallback_label=str(gesture_raw.get("fallback_label", "unknown")),
+            process_every_n_frames=max(1, int(gesture_raw.get("process_every_n_frames", 2))),
         ),
         overlay=OverlayConfig(
             debug=bool(overlay_raw.get("debug", True)),

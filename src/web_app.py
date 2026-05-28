@@ -82,8 +82,15 @@ class RecognitionEngine:
                 if self.config.overlay.mirror:
                     frame = cv2.flip(frame, 1)
 
-                faces = self.face_service.detect(frame)
-                gestures = self.gesture_service.detect(frame)
+                if camera_frame.frame_index % self.config.face.process_every_n_frames == 0:
+                    faces = self.face_service.detect(frame)
+                else:
+                    faces = self.latest_faces
+
+                if camera_frame.frame_index % self.config.gesture.process_every_n_frames == 0:
+                    gestures = self.gesture_service.detect(frame)
+                else:
+                    gestures = self.latest_gestures
 
                 draw_faces(frame, faces)
                 draw_gestures(frame, gestures or [self.gesture_service.fallback()])
@@ -94,6 +101,7 @@ class RecognitionEngine:
                     face_count=len(faces),
                     fps=camera_frame.fps,
                     gesture_count=len(gestures),
+                    gesture_error=self.gesture_service.import_error,
                     gesture_ready=self.gesture_service.hands is not None,
                 )
 
@@ -118,6 +126,7 @@ class RecognitionEngine:
             self.camera.release()
 
     def stream(self):
+        frame_delay = 1 / max(self.config.camera.target_fps, 1)
         while True:
             with self.lock:
                 frame = self.latest_jpeg or self.placeholder_jpeg
@@ -125,15 +134,13 @@ class RecognitionEngine:
             if frame is not None:
                 yield b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" + frame + b"\r\n"
 
-            time.sleep(0.04)
+            time.sleep(frame_delay)
 
     def status(self) -> dict[str, Any]:
         with self.lock:
             recognized_faces = [
                 {
                     "name": face.name,
-                    "confidence": face.confidence,
-                    "similarity": face.similarity,
                     "canSignIn": self._can_sign_in_with_face(face),
                 }
                 for face in self.latest_faces
@@ -141,8 +148,6 @@ class RecognitionEngine:
             sign_in_candidates = [
                 {
                     "name": face.name,
-                    "confidence": face.confidence,
-                    "similarity": face.similarity,
                 }
                 for face in self.latest_faces
                 if self._can_sign_in_with_face(face)
@@ -164,6 +169,7 @@ class RecognitionEngine:
                 "faces": recognized_faces,
                 "fps": round(self.fps, 1),
                 "gestureCount": len(self.latest_gestures),
+                "gestureError": self.gesture_service.import_error,
                 "gestures": gestures,
                 "minFaceConfidence": self.min_face_confidence,
                 "minRecognitionConfidence": self.min_recognition_confidence,
@@ -198,7 +204,7 @@ class RecognitionEngine:
         )
 
         if recognized is None:
-            return False, "No registered face recognized above 60% confidence yet."
+            return False, "No registered face recognized yet."
 
         if requested_name and requested_name.casefold() != recognized.name.casefold():
             return False, f"Recognized {recognized.name}, not {requested_name}."
@@ -213,7 +219,6 @@ class RecognitionEngine:
         return (
             face.name not in {"unknown", "face"}
             and face.confidence > self.min_face_confidence
-            and face.similarity > self.min_recognition_confidence
         )
 
     def _create_placeholder_frame(self, text: str) -> bytes:

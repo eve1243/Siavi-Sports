@@ -34,6 +34,7 @@ def main() -> int:
     gesture_service = GestureService(config.gesture)
     debug = config.overlay.debug
     latest_faces = []
+    latest_gestures = []
 
     try:
         camera.open()
@@ -44,9 +45,14 @@ def main() -> int:
             if config.overlay.mirror:
                 frame = cv2.flip(frame, 1)
 
-            faces = face_service.detect(frame)
-            gestures = gesture_service.detect(frame)
-            latest_faces = faces
+            if camera_frame.frame_index % config.face.process_every_n_frames == 0:
+                latest_faces = face_service.detect(frame)
+
+            if camera_frame.frame_index % config.gesture.process_every_n_frames == 0:
+                latest_gestures = gesture_service.detect(frame)
+
+            faces = latest_faces
+            gestures = latest_gestures
 
             draw_faces(frame, faces)
             draw_gestures(frame, gestures or [gesture_service.fallback()])
@@ -57,6 +63,7 @@ def main() -> int:
                 face_count=len(faces),
                 fps=camera_frame.fps,
                 gesture_count=len(gestures),
+                gesture_error=gesture_service.import_error,
                 gesture_ready=gesture_service.hands is not None,
             )
 

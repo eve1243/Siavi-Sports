@@ -32,9 +32,7 @@ def draw_faces(frame: np.ndarray, faces: list[FaceDetection]) -> None:
         x1, y1, x2, y2 = face.box
         color = GREEN if face.name != "unknown" else YELLOW
         cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
-        label = f"{face.name} face {face.confidence:.2f}"
-        if face.name != "unknown":
-            label = f"{face.name} {face.similarity:.2f}"
+        label = face.name if face.name != "unknown" else "face"
         _draw_label(frame, label, x1, y1, color)
 
 
@@ -64,13 +62,18 @@ def draw_status(
     face_count: int,
     fps: float,
     gesture_count: int,
+    gesture_error: str | None = None,
     gesture_ready: bool,
 ) -> None:
+    gesture_status = "ready"
+    if not gesture_ready:
+        gesture_status = gesture_error or "install mediapipe"
+
     status_lines = [
         f"Camera: {'active' if camera_active else 'inactive'}",
         f"Faces: {face_count}",
         f"Gestures: {gesture_count if gesture_count else 'unknown'}",
-        f"Gesture tracking: {'ready' if gesture_ready else 'install mediapipe'}",
+        f"Gesture tracking: {gesture_status}",
         "Keys: q quit | r register face | s snapshot | d debug",
     ]
 

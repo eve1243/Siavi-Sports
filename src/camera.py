@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import time
+import platform
 from dataclasses import dataclass
 from typing import Iterator
 
@@ -30,11 +31,12 @@ class Webcam:
         self._frame_index = 0
 
     def open(self) -> None:
-        self.capture = cv2.VideoCapture(self.config.index)
+        self.capture = cv2.VideoCapture(self.config.index, self._backend())
 
         if not self.capture.isOpened():
             raise CameraError(f"Could not open webcam index {self.config.index}.")
 
+        self.capture.set(cv2.CAP_PROP_BUFFERSIZE, self.config.buffer_size)
         self.capture.set(cv2.CAP_PROP_FRAME_WIDTH, self.config.width)
         self.capture.set(cv2.CAP_PROP_FRAME_HEIGHT, self.config.height)
         self.capture.set(cv2.CAP_PROP_FPS, self.config.target_fps)
@@ -64,6 +66,26 @@ class Webcam:
             spent = time.perf_counter() - started_at
             if spent < frame_delay:
                 time.sleep(frame_delay - spent)
+
+    def _backend(self) -> int:
+        backend = self.config.backend.strip().lower()
+        if backend == "dshow":
+            return cv2.CAP_DSHOW
+        if backend == "msmf":
+            return cv2.CAP_MSMF
+        if backend == "avfoundation":
+            return cv2.CAP_AVFOUNDATION
+        if backend == "v4l2":
+            return cv2.CAP_V4L2
+        if backend != "auto":
+            return cv2.CAP_ANY
+        if platform.system() == "Windows":
+            return cv2.CAP_DSHOW
+        if platform.system() == "Darwin":
+            return cv2.CAP_AVFOUNDATION
+        if platform.system() == "Linux":
+            return cv2.CAP_V4L2
+        return cv2.CAP_ANY
 
     def release(self) -> None:
         if self.capture is not None:

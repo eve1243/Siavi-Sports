@@ -49,15 +49,21 @@ class GestureService:
             self.import_error = str(error)
             return
 
+        solutions = getattr(mp, "solutions", None)
+        if solutions is None or not hasattr(solutions, "hands"):
+            version = getattr(mp, "__version__", "unknown")
+            self.import_error = f"MediaPipe {version} does not include the legacy Hands API."
+            return
+
         try:
-            self.hands = mp.solutions.hands.Hands(
+            self.hands = solutions.hands.Hands(
                 max_num_hands=self.config.max_hands,
                 min_detection_confidence=self.config.detection_confidence,
                 min_tracking_confidence=self.config.tracking_confidence,
                 model_complexity=1,
             )
         except Exception as error:
-            self.import_error = str(error)
+            self.import_error = f"{type(error).__name__}: {error}"
             self.hands = None
 
     def detect(self, frame: np.ndarray) -> list[GestureDetection]:

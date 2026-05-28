@@ -32,9 +32,11 @@ class GestureDetection:
 @dataclass
 class CameraConfig:
     index: int = 0
-    width: int = 1280
-    height: int = 720
-    target_fps: int = 24
+    width: int = 640
+    height: int = 480
+    target_fps: int = 30
+    backend: str = "auto"
+    buffer_size: int = 1
 
 
 @dataclass
@@ -43,10 +45,11 @@ class FaceConfig:
     model_name: str = "buffalo_l"
     detection_size: tuple[int, int] = (640, 640)
     min_detection_confidence: float = 0.6
-    recognition_threshold: float = 0.6
+    recognition_threshold: float = 0.5
     opencv_threshold: float = 72.0
-    database_path: str = "data/faces.json"
+    database_path: str = "data/faces.sqlite"
     providers: list[str] = field(default_factory=lambda: ["CPUExecutionProvider"])
+    process_every_n_frames: int = 3
 
 
 @dataclass
@@ -56,6 +59,7 @@ class GestureConfig:
     detection_confidence: float = 0.55
     tracking_confidence: float = 0.55
     fallback_label: str = "unknown"
+    process_every_n_frames: int = 2
 
 
 @dataclass
