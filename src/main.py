@@ -7,9 +7,10 @@ import cv2
 
 from app_config import load_config
 from camera import CameraError, Webcam
+from exercise_service import ExerciseService
 from face_recognition_service import FaceRecognitionService
 from gesture_service import GestureService
-from overlay import draw_faces, draw_gestures, draw_status, save_snapshot
+from overlay import draw_exercise, draw_faces, draw_gestures, draw_status, save_snapshot
 
 
 WINDOW_NAME = "SIAVI Local Face and Gesture Recognition"
@@ -32,9 +33,11 @@ def main() -> int:
     camera = Webcam(config.camera)
     face_service = FaceRecognitionService(config.face)
     gesture_service = GestureService(config.gesture)
+    exercise_service = ExerciseService(config.exercise)
     debug = config.overlay.debug
     latest_faces = []
     latest_gestures = []
+    latest_exercise = None
 
     try:
         camera.open()
@@ -51,15 +54,21 @@ def main() -> int:
             if camera_frame.frame_index % config.gesture.process_every_n_frames == 0:
                 latest_gestures = gesture_service.detect(frame)
 
+            if camera_frame.frame_index % config.exercise.process_every_n_frames == 0:
+                latest_exercise = exercise_service.detect(frame)
+
             faces = latest_faces
             gestures = latest_gestures
 
             draw_faces(frame, faces)
             draw_gestures(frame, gestures or [gesture_service.fallback()])
+            draw_exercise(frame, latest_exercise or exercise_service.fallback())
             draw_status(
                 frame,
                 camera_active=True,
                 debug=debug,
+                exercise_error=exercise_service.import_error,
+                exercise_ready=exercise_service.pose is not None,
                 face_count=len(faces),
                 fps=camera_frame.fps,
                 gesture_count=len(gestures),

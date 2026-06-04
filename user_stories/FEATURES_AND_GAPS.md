@@ -6,9 +6,9 @@ Quelle: `Enunciados trabalhos de avaliação 2 e 3 en-US (1).pdf`
 
 | Nr. | Feature | Beschreibung | Status im Projekt |
 | --- | --- | --- | --- |
-| F-01 | Initiale Registrierung | Neue Benutzer geben Name, Alter und Geschlecht ein und starten auf Level 1. | Teilweise umgesetzt |
+| F-01 | Initiale Registrierung | Neue Benutzer geben Name, Alter und Geschlecht ein und starten auf Level 1. | Umgesetzt |
 | F-02 | Facial Recognition | Die App erkennt registrierte Benutzer automatisch per Gesichtserkennung. | Umgesetzt |
-| F-03 | Persönliche Bio anzeigen | Nach Erkennung/Login werden Name, Alter, Geschlecht, Level, Score und Login-Anzahl angezeigt. | Teilweise umgesetzt |
+| F-03 | Persönliche Bio anzeigen | Nach Erkennung/Login werden Name, Alter, Geschlecht, Level, Score und Login-Anzahl angezeigt. | Umgesetzt |
 | F-04 | Login-Zähler | Die App speichert, wie oft ein Benutzer die App verwendet bzw. sich eingeloggt hat. | Fehlt |
 | F-05 | Fitness-Level | Benutzer starten auf Level 1; nach erfolgreich abgeschlossenem Set steigt das Level. | Fehlt |
 | F-06 | Wiederholungsziel pro Level | Standard: 5 Wiederholungen, danach +5 pro Level oder Trainerwert. | Fehlt |
@@ -96,4 +96,3 @@ Quelle: `Enunciados trabalhos de avaliação 2 e 3 en-US (1).pdf`
     - Ordner `2_Source_Code`
     - Ordner `3_Presentation`
     - ZIP-Datei vorbereiten
-

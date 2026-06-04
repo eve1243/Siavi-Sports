@@ -5,7 +5,7 @@ from typing import Any
 
 import yaml
 
-from domain import AppConfig, CameraConfig, FaceConfig, GestureConfig, OverlayConfig
+from domain import AppConfig, CameraConfig, ExerciseConfig, FaceConfig, GestureConfig, OverlayConfig
 
 
 def _as_tuple(value: Any, fallback: tuple[int, int]) -> tuple[int, int]:
@@ -27,6 +27,7 @@ def load_config(path: str = "config.yaml") -> AppConfig:
     camera_raw = raw.get("camera", {})
     face_raw = raw.get("face", {})
     gesture_raw = raw.get("gesture", {})
+    exercise_raw = raw.get("exercise", {})
     overlay_raw = raw.get("overlay", {})
 
     return AppConfig(
@@ -56,6 +57,17 @@ def load_config(path: str = "config.yaml") -> AppConfig:
             tracking_confidence=float(gesture_raw.get("tracking_confidence", 0.55)),
             fallback_label=str(gesture_raw.get("fallback_label", "unknown")),
             process_every_n_frames=max(1, int(gesture_raw.get("process_every_n_frames", 2))),
+        ),
+        exercise=ExerciseConfig(
+            enabled=bool(exercise_raw.get("enabled", True)),
+            detection_confidence=float(exercise_raw.get("detection_confidence", 0.55)),
+            tracking_confidence=float(exercise_raw.get("tracking_confidence", 0.55)),
+            fallback_label=str(exercise_raw.get("fallback_label", "unknown")),
+            process_every_n_frames=max(1, int(exercise_raw.get("process_every_n_frames", 2))),
+            samples_path=str(exercise_raw.get("samples_path", "data/exercise_samples.csv")),
+            model_path=str(exercise_raw.get("model_path", "data/exercise_knn.npz")),
+            min_samples_per_label=max(1, int(exercise_raw.get("min_samples_per_label", 3))),
+            k_neighbors=max(1, int(exercise_raw.get("k_neighbors", 5))),
         ),
         overlay=OverlayConfig(
             debug=bool(overlay_raw.get("debug", True)),

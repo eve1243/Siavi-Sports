@@ -18,6 +18,9 @@ class FaceProfile:
     embeddings: list[np.ndarray]
     age: int | None = None
     gender: str | None = None
+    level: int = 1
+    score: int = 0
+    login_count: int = 0
 
 
 @dataclass
@@ -86,24 +89,63 @@ class FaceRecognitionService:
     @property
     def registered_profiles(self) -> list[dict[str, str | int | None]]:
         profiles: dict[str, dict[str, str | int | None]] = {
-            profile.name: {"name": profile.name, "age": profile.age, "gender": profile.gender}
+            profile.name: {
+                "name": profile.name,
+                "age": profile.age,
+                "gender": profile.gender,
+                "level": profile.level,
+                "score": profile.score,
+                "loginCount": profile.login_count,
+            }
             for profile in self.profiles
         }
 
         for sample in self.opencv_samples:
-            profiles[sample.name] = {
-                "name": sample.name,
-                "age": sample.age,
-                "gender": sample.gender,
-            }
+            profiles.setdefault(
+                sample.name,
+                {
+                    "name": sample.name,
+                    "age": sample.age,
+                    "gender": sample.gender,
+                    "level": 1,
+                    "score": 0,
+                    "loginCount": 0,
+                },
+            )
 
         return sorted(profiles.values(), key=lambda profile: str(profile["name"]).casefold())
+
+    def get_registered_profile(self, name: str | None) -> dict[str, str | int | None] | None:
+        if not name:
+            return None
+
+        for profile in self.registered_profiles:
+            if str(profile["name"]).casefold() == name.casefold():
+                return profile
+
+        return None
+
+    def record_login(self, name: str) -> None:
+        with self._connect() as connection:
+            connection.execute(
+                "UPDATE profiles SET login_count = login_count + 1 WHERE name = ?",
+                (name,),
+            )
+        self.load_profiles()
 
     def load_profiles(self) -> None:
         with self._connect() as connection:
             rows = connection.execute(
                 """
-                SELECT profiles.id, profiles.name, profiles.age, profiles.gender, embeddings.embedding
+                SELECT
+                    profiles.id,
+                    profiles.name,
+                    profiles.age,
+                    profiles.gender,
+                    profiles.level,
+                    profiles.score,
+                    profiles.login_count,
+                    embeddings.embedding
                 FROM profiles
                 LEFT JOIN embeddings ON embeddings.profile_id = profiles.id
                 ORDER BY profiles.name, embeddings.id
@@ -111,10 +153,18 @@ class FaceRecognitionService:
             ).fetchall()
 
         by_id: dict[int, FaceProfile] = {}
-        for profile_id, name, age, gender, raw_embedding in rows:
+        for profile_id, name, age, gender, level, score, login_count, raw_embedding in rows:
             profile = by_id.setdefault(
                 int(profile_id),
-                FaceProfile(name=str(name), embeddings=[], age=age, gender=gender),
+                FaceProfile(
+                    name=str(name),
+                    embeddings=[],
+                    age=age,
+                    gender=gender,
+                    level=int(level or 1),
+                    score=int(score or 0),
+                    login_count=int(login_count or 0),
+                ),
             )
             if raw_embedding is not None:
                 profile.embeddings.append(self._array_from_blob(raw_embedding))
@@ -281,15 +331,17 @@ class FaceRecognitionService:
         for profile in self.profiles:
             if profile.name.casefold() == cleaned_name.casefold():
                 profile.embeddings.append(detection.embedding)
-                profile.age = age
-                profile.gender = gender
+                profile.age = age if age is not None else profile.age
+                profile.gender = gender if gender is not None else profile.gender
                 self.save_profiles()
+                self.load_profiles()
                 return
 
         self.profiles.append(
             FaceProfile(name=cleaned_name, embeddings=[detection.embedding], age=age, gender=gender)
         )
         self.save_profiles()
+        self.load_profiles()
 
     def register_opencv(
         self,
@@ -309,6 +361,8 @@ class FaceRecognitionService:
         )
         self._train_opencv_recognizer()
         self.save_opencv_profiles()
+        self.load_profiles()
+        self.load_opencv_profiles()
 
     def _ensure_database(self) -> None:
         self.database_path.parent.mkdir(parents=True, exist_ok=True)
@@ -320,10 +374,16 @@ class FaceRecognitionService:
                     name TEXT NOT NULL UNIQUE COLLATE NOCASE,
                     age INTEGER,
                     gender TEXT,
+                    level INTEGER NOT NULL DEFAULT 1,
+                    score INTEGER NOT NULL DEFAULT 0,
+                    login_count INTEGER NOT NULL DEFAULT 0,
                     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
                 )
                 """
             )
+            self._add_missing_column(connection, "profiles", "level", "INTEGER NOT NULL DEFAULT 1")
+            self._add_missing_column(connection, "profiles", "score", "INTEGER NOT NULL DEFAULT 0")
+            self._add_missing_column(connection, "profiles", "login_count", "INTEGER NOT NULL DEFAULT 0")
             connection.execute(
                 """
                 CREATE TABLE IF NOT EXISTS embeddings (
@@ -369,8 +429,8 @@ class FaceRecognitionService:
     ) -> int:
         connection.execute(
             """
-            INSERT INTO profiles (name, age, gender)
-            VALUES (?, ?, ?)
+            INSERT INTO profiles (name, age, gender, level)
+            VALUES (?, ?, ?, 1)
             ON CONFLICT(name) DO UPDATE SET
                 age = COALESCE(excluded.age, profiles.age),
                 gender = COALESCE(excluded.gender, profiles.gender)
@@ -381,6 +441,20 @@ class FaceRecognitionService:
         if row is None:
             raise RuntimeError(f"Could not save profile for {name}.")
         return int(row[0])
+
+    def _add_missing_column(
+        self,
+        connection: sqlite3.Connection,
+        table_name: str,
+        column_name: str,
+        definition: str,
+    ) -> None:
+        columns = {
+            str(row[1])
+            for row in connection.execute(f"PRAGMA table_info({table_name})").fetchall()
+        }
+        if column_name not in columns:
+            connection.execute(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {definition}")
 
     def _import_legacy_json(self, connection: sqlite3.Connection) -> None:
         if not self.legacy_json_path.exists() or self.legacy_json_path.suffix != ".json":

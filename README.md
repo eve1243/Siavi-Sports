@@ -12,6 +12,8 @@ Keine React-App und kein Browser-ML. Die App oeffnet ein normales OpenCV-Fenster
 - optional InsightFace fuer gute Face Recognition mit Embeddings
 - MediaPipe Hands fuer vortrainierte Handpunkte
 - Regelbasierte Gesten aus Fingerpositionen, kein Training noetig
+- MediaPipe Pose plus lokale Exercise-KI fuer Fitnessuebungen
+- kNN-Modell, das aus selbst gespeicherten Uebungs-Samples mitlernt
 - Alles laeuft lokal auf deinem Rechner
 
 ## Wichtig: Python-Version
@@ -94,10 +96,20 @@ pip install -r requirements.txt
 python src\web_app.py
 ```
 
+Das startet das Python-Backend fuer Kamera, Face Recognition und Datenbank.
+
+In einem zweiten PowerShell-Terminal das Next.js-Frontend starten:
+
+```powershell
+cd frontend
+npm install
+npm run dev
+```
+
 Dann im Browser oeffnen:
 
 ```text
-http://127.0.0.1:8000
+http://127.0.0.1:3000
 ```
 
 Wenn PowerShell das Aktivieren der venv blockiert, einmalig ausfuehren:
@@ -220,6 +232,16 @@ pip install -r requirements.txt
 python src/web_app.py
 ```
 
+Das startet das Python-Backend fuer Kamera, Face Recognition und Datenbank.
+
+In einem zweiten Terminal das Next.js-Frontend starten:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
 Wenn du schon eine `.venv` mit einer falschen Python-Version erstellt hast:
 
 ```bash
@@ -233,7 +255,7 @@ pip install -r requirements.txt
 Dann oeffnen:
 
 ```text
-http://127.0.0.1:8000
+http://127.0.0.1:3000
 ```
 
 Die UI zeigt Live-Kamera, Login-Status, registrierte Profile und eine Registrieren-Schaltflaeche.
@@ -276,6 +298,32 @@ Gewuenschte Gesture-Klassen:
 
 Wenn `mediapipe` nicht installiert ist, startet die App trotzdem und zeigt im Overlay den Hinweis `install mediapipe`.
 
+## Uebungs-KI Mit Lokal Lernendem Modell
+
+Fuer Aufgabe 3 erkennt die App jetzt auch Fitnessuebungen ueber den ganzen Koerper. Dafuer wird `MediaPipe Pose` verwendet. Die App startet sofort mit einfachen Regeln fuer:
+
+- `weight_lift`
+- `jump`
+- `arm_raises`
+
+Nach dem FaceID-Login erscheint im Trainingsbereich die Box `Exercise AI`. Dort siehst du:
+
+- erkannte Uebung
+- Quelle der Erkennung (`rules` oder `learned`)
+- Wiederholungen
+- Anzahl gespeicherter Trainings-Samples
+
+Damit die KI mit deinem Projekt mitlernt:
+
+1. Starte Backend und Frontend.
+2. Logge dich per FaceID ein.
+3. Stelle dich so vor die Kamera, dass der ganze Oberkoerper sichtbar ist.
+4. Waehle in `Exercise AI` das richtige Label, z.B. `weight_lift`, `jump` oder `arm_raises`.
+5. Klicke mehrmals auf `Save pose`, waehrend du verschiedene Positionen der Uebung zeigst.
+6. Nach mindestens 3 Samples pro Label verwendet die App automatisch das gelernte Modell.
+
+Die Trainingsdaten werden lokal in `data/exercise_samples.csv` gespeichert. Das daraus gelernte Modell liegt in `data/exercise_knn.npz`. Beide Dateien bleiben lokal und werden wegen `.gitignore` nicht ins Repository committed.
+
 ## Config
 
 Alles Wichtige steht in `config.yaml`:
@@ -290,6 +338,7 @@ Alles Wichtige steht in `config.yaml`:
 - SQLite-Datenbank fuer mehrere Profile
 - Detection-Intervalle fuer bessere FPS
 - Hand Tracking Confidence
+- Exercise-AI Samples und Modellpfad
 - Snapshot-Ordner
 
 Fuer mehr FPS ist die Standard-Aufloesung auf `640x480` mit `30 FPS` gesetzt. Face Detection laeuft standardmaessig nur jedes dritte Frame, Gestenerkennung jedes zweite Frame. Wenn dein Rechner stark genug ist, kannst du `process_every_n_frames` wieder niedriger setzen.

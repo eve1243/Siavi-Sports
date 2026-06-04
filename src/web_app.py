@@ -3,22 +3,22 @@ from __future__ import annotations
 import json
 import threading
 import time
-from pathlib import Path
 from typing import Any, Optional
 
 import cv2
 import numpy as np
 import uvicorn
 from fastapi import FastAPI
-from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
+from fastapi.responses import JSONResponse, RedirectResponse, StreamingResponse
 from pydantic import BaseModel
 
 from app_config import load_config
 from camera import CameraError, Webcam
 from domain import FaceDetection
+from exercise_service import ExerciseService
 from face_recognition_service import FaceRecognitionService
 from gesture_service import GestureService
-from overlay import draw_faces, draw_gestures, draw_status
+from overlay import draw_exercise, draw_faces, draw_gestures, draw_status
 
 
 class RegisterRequest(BaseModel):
@@ -31,16 +31,22 @@ class LoginRequest(BaseModel):
     name: Optional[str] = None
 
 
+class ExerciseSampleRequest(BaseModel):
+    label: str
+
+
 class RecognitionEngine:
     def __init__(self) -> None:
         self.config = load_config("config.yaml")
         self.camera = Webcam(self.config.camera)
         self.face_service = FaceRecognitionService(self.config.face)
         self.gesture_service = GestureService(self.config.gesture)
+        self.exercise_service = ExerciseService(self.config.exercise)
         self.lock = threading.Lock()
         self.latest_jpeg: bytes | None = None
         self.latest_faces = []
         self.latest_gestures = []
+        self.latest_exercise = None
         self.error: str | None = None
         self.running = False
         self.thread: threading.Thread | None = None
@@ -92,12 +98,20 @@ class RecognitionEngine:
                 else:
                     gestures = self.latest_gestures
 
+                if camera_frame.frame_index % self.config.exercise.process_every_n_frames == 0:
+                    exercise = self.exercise_service.detect(frame)
+                else:
+                    exercise = self.latest_exercise
+
                 draw_faces(frame, faces)
                 draw_gestures(frame, gestures or [self.gesture_service.fallback()])
+                draw_exercise(frame, exercise or self.exercise_service.fallback())
                 draw_status(
                     frame,
                     camera_active=True,
                     debug=True,
+                    exercise_error=self.exercise_service.import_error,
+                    exercise_ready=self.exercise_service.pose is not None,
                     face_count=len(faces),
                     fps=camera_frame.fps,
                     gesture_count=len(gestures),
@@ -113,6 +127,7 @@ class RecognitionEngine:
                     self.latest_jpeg = encoded.tobytes()
                     self.latest_faces = faces
                     self.latest_gestures = gestures
+                    self.latest_exercise = exercise
                     self.fps = camera_frame.fps
                     self.error = None
 
@@ -160,11 +175,24 @@ class RecognitionEngine:
                 }
                 for gesture in self.latest_gestures
             ]
+            exercise = self.latest_exercise
 
             return {
                 "authenticated": self.active_user is not None,
                 "authenticatedName": self.active_user,
+                "activeProfile": self.face_service.get_registered_profile(self.active_user),
                 "error": self.error,
+                "exercise": {
+                    "label": exercise.label if exercise else "unknown",
+                    "confidence": exercise.confidence if exercise else 0.0,
+                    "source": exercise.source if exercise else "none",
+                    "state": exercise.state if exercise else "unknown",
+                    "repetitions": exercise.repetitions if exercise else 0,
+                },
+                "exerciseError": self.exercise_service.import_error,
+                "exerciseReady": self.exercise_service.pose is not None,
+                "exerciseSampleCount": self.exercise_service.sample_count,
+                "exerciseLabels": self.exercise_service.learned_labels,
                 "faceCount": len(self.latest_faces),
                 "faces": recognized_faces,
                 "fps": round(self.fps, 1),
@@ -210,10 +238,20 @@ class RecognitionEngine:
             return False, f"Recognized {recognized.name}, not {requested_name}."
 
         self.active_user = recognized.name
+        self.face_service.record_login(recognized.name)
         return True, f"Welcome back, {recognized.name}."
 
     def logout(self) -> None:
         self.active_user = None
+
+    def add_exercise_sample(self, label: str) -> tuple[bool, str]:
+        with self.lock:
+            exercise = self.latest_exercise
+        return self.exercise_service.add_sample(label, exercise)
+
+    def train_exercise_model(self) -> tuple[bool, str]:
+        self.exercise_service.train()
+        return True, f"Trained on {self.exercise_service.sample_count} exercise samples."
 
     def _can_sign_in_with_face(self, face: FaceDetection) -> bool:
         return (
@@ -262,9 +300,9 @@ def on_shutdown() -> None:
     engine.stop()
 
 
-@app.get("/", response_class=HTMLResponse)
-def index() -> str:
-    return Path("src/web_ui.html").read_text(encoding="utf-8")
+@app.get("/")
+def index() -> RedirectResponse:
+    return RedirectResponse("http://127.0.0.1:3000")
 
 
 @app.get("/video.mjpg")
@@ -293,6 +331,18 @@ def sign_in(request: LoginRequest) -> JSONResponse:
 def logout() -> JSONResponse:
     engine.logout()
     return JSONResponse({"ok": True, "message": "Signed out."})
+
+
+@app.post("/api/exercise/sample")
+def add_exercise_sample(request: ExerciseSampleRequest) -> JSONResponse:
+    ok, message = engine.add_exercise_sample(request.label)
+    return JSONResponse({"ok": ok, "message": message}, status_code=200 if ok else 400)
+
+
+@app.post("/api/exercise/train")
+def train_exercise_model() -> JSONResponse:
+    ok, message = engine.train_exercise_model()
+    return JSONResponse({"ok": ok, "message": message})
 
 
 def main() -> None:

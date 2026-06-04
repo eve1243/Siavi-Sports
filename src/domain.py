@@ -30,6 +30,18 @@ class GestureDetection:
 
 
 @dataclass
+class ExerciseDetection:
+    label: str
+    confidence: float
+    source: str
+    state: str = "unknown"
+    repetitions: int = 0
+    landmarks: list[tuple[int, int]] = field(default_factory=list)
+    connections: list[tuple[int, int]] = field(default_factory=list)
+    features: np.ndarray | None = None
+
+
+@dataclass
 class CameraConfig:
     index: int = 0
     width: int = 640
@@ -63,6 +75,19 @@ class GestureConfig:
 
 
 @dataclass
+class ExerciseConfig:
+    enabled: bool = True
+    detection_confidence: float = 0.55
+    tracking_confidence: float = 0.55
+    fallback_label: str = "unknown"
+    process_every_n_frames: int = 2
+    samples_path: str = "data/exercise_samples.csv"
+    model_path: str = "data/exercise_knn.npz"
+    min_samples_per_label: int = 3
+    k_neighbors: int = 5
+
+
+@dataclass
 class OverlayConfig:
     debug: bool = True
     mirror: bool = True
@@ -74,6 +99,7 @@ class AppConfig:
     camera: CameraConfig = field(default_factory=CameraConfig)
     face: FaceConfig = field(default_factory=FaceConfig)
     gesture: GestureConfig = field(default_factory=GestureConfig)
+    exercise: ExerciseConfig = field(default_factory=ExerciseConfig)
     overlay: OverlayConfig = field(default_factory=OverlayConfig)
 
 

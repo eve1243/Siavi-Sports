@@ -26,6 +26,17 @@ gesture:
   fallback_label: unknown
   process_every_n_frames: 2
 
+exercise:
+  enabled: true
+  detection_confidence: 0.55
+  tracking_confidence: 0.55
+  fallback_label: unknown
+  process_every_n_frames: 2
+  samples_path: data/exercise_samples.csv
+  model_path: data/exercise_knn.npz
+  min_samples_per_label: 3
+  k_neighbors: 5
+
 overlay:
   debug: true
   mirror: true

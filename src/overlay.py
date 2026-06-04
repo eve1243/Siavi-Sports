@@ -6,7 +6,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from domain import FaceDetection, GestureDetection
+from domain import ExerciseDetection, FaceDetection, GestureDetection
 
 
 GREEN = (80, 220, 120)
@@ -54,11 +54,29 @@ def draw_gestures(frame: np.ndarray, gestures: list[GestureDetection]) -> None:
         _draw_label(frame, label, x1, y1, color)
 
 
+def draw_exercise(frame: np.ndarray, exercise: ExerciseDetection | None) -> None:
+    if exercise is None:
+        return
+
+    label = f"{exercise.label} x{exercise.repetitions} {exercise.confidence:.2f}"
+    color = GREEN if exercise.label != "unknown" else YELLOW
+    _draw_label(frame, label, 16, frame.shape[0] - 54, color)
+
+    for start, end in exercise.connections:
+        if start < len(exercise.landmarks) and end < len(exercise.landmarks):
+            cv2.line(frame, exercise.landmarks[start], exercise.landmarks[end], color, 2)
+
+    for point in exercise.landmarks:
+        cv2.circle(frame, point, 4, WHITE, -1)
+
+
 def draw_status(
     frame: np.ndarray,
     *,
     camera_active: bool,
     debug: bool,
+    exercise_error: str | None = None,
+    exercise_ready: bool,
     face_count: int,
     fps: float,
     gesture_count: int,
@@ -69,11 +87,16 @@ def draw_status(
     if not gesture_ready:
         gesture_status = gesture_error or "install mediapipe"
 
+    exercise_status = "ready"
+    if not exercise_ready:
+        exercise_status = exercise_error or "install mediapipe"
+
     status_lines = [
         f"Camera: {'active' if camera_active else 'inactive'}",
         f"Faces: {face_count}",
         f"Gestures: {gesture_count if gesture_count else 'unknown'}",
         f"Gesture tracking: {gesture_status}",
+        f"Exercise AI: {exercise_status}",
         "Keys: q quit | r register face | s snapshot | d debug",
     ]
 

@@ -10,3 +10,6 @@ data/
 models/*.pt
 models/*.onnx
 snapshots/
+logs/
+frontend/.next/
+frontend/node_modules/

@@ -14,7 +14,7 @@ Akzeptanzkriterien:
 - Die Profildaten werden lokal gespeichert.
 - Neue Benutzer starten auf Level 1.
 
-Status: Teilweise umgesetzt. Name, Alter, Geschlecht und Gesichtsdaten werden gespeichert; Level 1 fehlt noch.
+Status: Umgesetzt. Name, Alter, Geschlecht und Gesichtsdaten werden gespeichert; neue Benutzer starten mit Level 1.
 
 ### US-02 - Gesicht registrieren
 
@@ -65,7 +65,7 @@ Akzeptanzkriterien:
 - Die App zeigt den aktuellen Score an.
 - Die App zeigt die Anzahl der bisherigen Logins an.
 
-Status: Teilweise umgesetzt. Aktiver Benutzer wird angezeigt; Alter, Geschlecht, Level, Score und Login-Zähler fehlen im Trainingsbereich.
+Status: Umgesetzt. Der Trainingsbereich zeigt Name, Alter, Geschlecht, Level, Score und Login-Zähler an.
 
 ### US-06 - Login-Zähler speichern
 
@@ -248,4 +248,3 @@ Akzeptanzkriterien:
 - Die Abgabe kann als ZIP-Datei erstellt werden.
 
 Status: Fehlt.
-
