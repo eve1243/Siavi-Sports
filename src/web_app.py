@@ -35,6 +35,16 @@ class ExerciseSampleRequest(BaseModel):
     label: str
 
 
+class WorkoutStartRequest(BaseModel):
+    exercise: str
+
+
+class ProgressRequest(BaseModel):
+    scoreDelta: int = 0
+    levelDelta: int = 0
+    completedSet: bool = False
+
+
 class RecognitionEngine:
     def __init__(self) -> None:
         self.config = load_config("config.yaml")
@@ -53,6 +63,13 @@ class RecognitionEngine:
         self.fps = 0.0
         self.placeholder_jpeg = self._create_placeholder_frame("Waiting for camera permission")
         self.active_user: str | None = None
+        self.workout_exercise = "weight_lift"
+        self.workout_baseline_reps = 0
+        self.workout_current_reps = 0
+        self.workout_target_reps = 5
+        self.workout_state = "idle"
+        self.workout_message = "Select an exercise and start a set."
+        self.workout_completed = False
 
     @property
     def min_face_confidence(self) -> float:
@@ -131,6 +148,9 @@ class RecognitionEngine:
                     self.fps = camera_frame.fps
                     self.error = None
 
+                if exercise is not None:
+                    self._update_workout(exercise.label, exercise.repetitions)
+
         except CameraError as error:
             with self.lock:
                 self.error = str(error)
@@ -204,6 +224,14 @@ class RecognitionEngine:
                 "recognitionReady": self.face_service.recognition_ready,
                 "profiles": self.face_service.registered_profiles,
                 "signInCandidates": sign_in_candidates,
+                "workout": {
+                    "exercise": self.workout_exercise,
+                    "currentReps": self.workout_current_reps,
+                    "targetReps": self.workout_target_reps,
+                    "state": self.workout_state,
+                    "message": self.workout_message,
+                    "completed": self.workout_completed,
+                },
             }
 
     def register(self, name: str, age: int | None, gender: str | None) -> tuple[bool, str]:
@@ -239,10 +267,14 @@ class RecognitionEngine:
 
         self.active_user = recognized.name
         self.face_service.record_login(recognized.name)
+        self._reset_workout_for_profile()
         return True, f"Welcome back, {recognized.name}."
 
     def logout(self) -> None:
         self.active_user = None
+        self.exercise_service.set_target_exercise(None)
+        self.workout_state = "idle"
+        self.workout_message = "Select an exercise and start a set."
 
     def add_exercise_sample(self, label: str) -> tuple[bool, str]:
         with self.lock:
@@ -252,6 +284,84 @@ class RecognitionEngine:
     def train_exercise_model(self) -> tuple[bool, str]:
         self.exercise_service.train()
         return True, f"Trained on {self.exercise_service.sample_count} exercise samples."
+
+    def start_workout(self, exercise: str) -> tuple[bool, str]:
+        if self.active_user is None:
+            return False, "Sign in before starting a workout."
+
+        cleaned_exercise = exercise.strip().lower().replace(" ", "_")
+        allowed = {"weight_lift", "jump", "arm_raises"}
+        if cleaned_exercise not in allowed:
+            return False, "Choose weight_lift, jump or arm_raises."
+
+        self.exercise_service.set_target_exercise(cleaned_exercise)
+        latest_reps = self.exercise_service.repetitions.get(cleaned_exercise, 0)
+        self.workout_exercise = cleaned_exercise
+        self.workout_baseline_reps = latest_reps
+        self.workout_current_reps = 0
+        self.workout_target_reps = self._target_reps_for_active_user()
+        self.workout_state = "running"
+        self.workout_completed = False
+        self.workout_message = f"Set started: {cleaned_exercise.replace('_', ' ')}."
+        return True, self.workout_message
+
+    def record_progress(self, request: ProgressRequest) -> tuple[bool, str, dict[str, Any] | None]:
+        if self.active_user is None:
+            return False, "Sign in before saving progress.", None
+
+        try:
+            profile = self.face_service.record_progress(
+                self.active_user,
+                score_delta=request.scoreDelta,
+                level_delta=request.levelDelta,
+                completed_sets_delta=1 if request.completedSet else 0,
+            )
+        except Exception as error:
+            return False, str(error), None
+
+        return True, "Progress saved.", profile
+
+    def _target_reps_for_active_user(self) -> int:
+        profile = self.face_service.get_registered_profile(self.active_user)
+        level = 1
+        if profile is not None:
+            level = int(profile.get("level") or 1)
+        return max(5, level * 5)
+
+    def _reset_workout_for_profile(self) -> None:
+        self.workout_baseline_reps = self.exercise_service.repetitions.get(self.workout_exercise, 0)
+        self.workout_current_reps = 0
+        self.workout_target_reps = self._target_reps_for_active_user()
+        self.workout_state = "idle"
+        self.workout_completed = False
+        self.workout_message = "Select an exercise and start a set."
+
+    def _update_workout(self, label: str, total_reps: int) -> None:
+        if self.active_user is None or self.workout_state != "running" or self.workout_completed:
+            return
+
+        if label != self.workout_exercise:
+            self.workout_message = f"Waiting for {self.workout_exercise.replace('_', ' ')}."
+            return
+
+        current_reps = max(0, total_reps - self.workout_baseline_reps)
+        self.workout_current_reps = min(current_reps, self.workout_target_reps)
+        self.workout_message = f"{self.workout_current_reps}/{self.workout_target_reps} reps."
+
+        if current_reps < self.workout_target_reps:
+            return
+
+        score_delta = self.workout_target_reps * 10
+        self.face_service.record_progress(
+            self.active_user,
+            score_delta=score_delta,
+            level_delta=1,
+            completed_sets_delta=1,
+        )
+        self.workout_state = "completed"
+        self.workout_completed = True
+        self.exercise_service.set_target_exercise(None)
+        self.workout_message = f"Set complete. +{score_delta} score and level up."
 
     def _can_sign_in_with_face(self, face: FaceDetection) -> bool:
         return (
@@ -343,6 +453,21 @@ def add_exercise_sample(request: ExerciseSampleRequest) -> JSONResponse:
 def train_exercise_model() -> JSONResponse:
     ok, message = engine.train_exercise_model()
     return JSONResponse({"ok": ok, "message": message})
+
+
+@app.post("/api/workout/start")
+def start_workout(request: WorkoutStartRequest) -> JSONResponse:
+    ok, message = engine.start_workout(request.exercise)
+    return JSONResponse({"ok": ok, "message": message}, status_code=200 if ok else 400)
+
+
+@app.post("/api/progress")
+def record_progress(request: ProgressRequest) -> JSONResponse:
+    ok, message, profile = engine.record_progress(request)
+    return JSONResponse(
+        {"ok": ok, "message": message, "profile": profile},
+        status_code=200 if ok else 400,
+    )
 
 
 def main() -> None:

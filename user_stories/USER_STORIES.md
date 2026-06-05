@@ -76,7 +76,7 @@ Akzeptanzkriterien:
 - Der Login-Zähler wird dauerhaft gespeichert.
 - Der Login-Zähler wird im Trainingsbereich angezeigt.
 
-Status: Fehlt.
+Status: Umgesetzt. Jeder erfolgreiche FaceID-Login erhoeht den gespeicherten Login-Zaehler des Profils.
 
 ### US-07 - Score speichern
 
@@ -88,7 +88,7 @@ Akzeptanzkriterien:
 - Der Score wird dauerhaft pro Benutzer gespeichert.
 - Der Score wird nach dem Login wieder geladen.
 
-Status: Fehlt.
+Status: Umgesetzt. Score kann ueber die Fortschritts-API pro Benutzer dauerhaft aktualisiert und nach dem Login wieder geladen werden.
 
 ### US-08 - Fitness-Level erhöhen
 
@@ -100,7 +100,7 @@ Akzeptanzkriterien:
 - Das Level wird pro Benutzer gespeichert.
 - Das aktuelle Level wird im Trainingsbereich angezeigt.
 
-Status: Fehlt.
+Status: Umgesetzt. Level kann ueber die Fortschritts-API pro Benutzer dauerhaft aktualisiert und nach dem Login wieder geladen werden.
 
 ### US-09 - Wiederholungsziel pro Level
 

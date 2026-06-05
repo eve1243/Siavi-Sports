@@ -21,6 +21,7 @@ class FaceProfile:
     level: int = 1
     score: int = 0
     login_count: int = 0
+    completed_sets: int = 0
 
 
 @dataclass
@@ -96,6 +97,7 @@ class FaceRecognitionService:
                 "level": profile.level,
                 "score": profile.score,
                 "loginCount": profile.login_count,
+                "completedSets": profile.completed_sets,
             }
             for profile in self.profiles
         }
@@ -110,6 +112,7 @@ class FaceRecognitionService:
                     "level": 1,
                     "score": 0,
                     "loginCount": 0,
+                    "completedSets": 0,
                 },
             )
 
@@ -133,6 +136,40 @@ class FaceRecognitionService:
             )
         self.load_profiles()
 
+    def record_progress(
+        self,
+        name: str,
+        score_delta: int = 0,
+        level_delta: int = 0,
+        completed_sets_delta: int = 0,
+    ) -> dict[str, str | int | None]:
+        cleaned_name = name.strip()
+        if not cleaned_name:
+            raise ValueError("Name must not be empty.")
+
+        with self._connect() as connection:
+            connection.execute(
+                """
+                UPDATE profiles
+                SET
+                    score = MAX(0, score + ?),
+                    level = MAX(1, level + ?),
+                    completed_sets = MAX(0, completed_sets + ?)
+                WHERE name = ?
+                """,
+                (score_delta, level_delta, completed_sets_delta, cleaned_name),
+            )
+            changed = connection.total_changes
+
+        if changed == 0:
+            raise ValueError(f"No profile found for {cleaned_name}.")
+
+        self.load_profiles()
+        profile = self.get_registered_profile(cleaned_name)
+        if profile is None:
+            raise RuntimeError(f"Could not load updated profile for {cleaned_name}.")
+        return profile
+
     def load_profiles(self) -> None:
         with self._connect() as connection:
             rows = connection.execute(
@@ -145,6 +182,7 @@ class FaceRecognitionService:
                     profiles.level,
                     profiles.score,
                     profiles.login_count,
+                    profiles.completed_sets,
                     embeddings.embedding
                 FROM profiles
                 LEFT JOIN embeddings ON embeddings.profile_id = profiles.id
@@ -153,7 +191,17 @@ class FaceRecognitionService:
             ).fetchall()
 
         by_id: dict[int, FaceProfile] = {}
-        for profile_id, name, age, gender, level, score, login_count, raw_embedding in rows:
+        for (
+            profile_id,
+            name,
+            age,
+            gender,
+            level,
+            score,
+            login_count,
+            completed_sets,
+            raw_embedding,
+        ) in rows:
             profile = by_id.setdefault(
                 int(profile_id),
                 FaceProfile(
@@ -164,6 +212,7 @@ class FaceRecognitionService:
                     level=int(level or 1),
                     score=int(score or 0),
                     login_count=int(login_count or 0),
+                    completed_sets=int(completed_sets or 0),
                 ),
             )
             if raw_embedding is not None:
@@ -377,6 +426,7 @@ class FaceRecognitionService:
                     level INTEGER NOT NULL DEFAULT 1,
                     score INTEGER NOT NULL DEFAULT 0,
                     login_count INTEGER NOT NULL DEFAULT 0,
+                    completed_sets INTEGER NOT NULL DEFAULT 0,
                     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
                 )
                 """
@@ -384,6 +434,12 @@ class FaceRecognitionService:
             self._add_missing_column(connection, "profiles", "level", "INTEGER NOT NULL DEFAULT 1")
             self._add_missing_column(connection, "profiles", "score", "INTEGER NOT NULL DEFAULT 0")
             self._add_missing_column(connection, "profiles", "login_count", "INTEGER NOT NULL DEFAULT 0")
+            self._add_missing_column(
+                connection,
+                "profiles",
+                "completed_sets",
+                "INTEGER NOT NULL DEFAULT 0",
+            )
             connection.execute(
                 """
                 CREATE TABLE IF NOT EXISTS embeddings (

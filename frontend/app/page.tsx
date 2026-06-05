@@ -11,6 +11,7 @@ type Profile = {
   level: number;
   score: number;
   loginCount: number;
+  completedSets: number;
 };
 
 type SignInCandidate = {
@@ -31,6 +32,15 @@ type Exercise = {
   repetitions: number;
 };
 
+type Workout = {
+  exercise: string;
+  currentReps: number;
+  targetReps: number;
+  state: string;
+  message: string;
+  completed: boolean;
+};
+
 type StatusResponse = {
   authenticated: boolean;
   authenticatedName: string | null;
@@ -49,6 +59,7 @@ type StatusResponse = {
   recognitionReady: boolean;
   profiles: Profile[];
   signInCandidates: SignInCandidate[];
+  workout: Workout;
 };
 
 const translations = {
@@ -80,6 +91,7 @@ const translations = {
     fitnessLevel: "Level",
     score: "Score",
     loginCount: "Logins",
+    completedSets: "Sets",
     currentGesture: "Current gesture",
     cameraFps: "Camera FPS",
     warmupTitle: "Warm-up",
@@ -94,6 +106,9 @@ const translations = {
     exerciseSource: "Source",
     exerciseReps: "Reps",
     exerciseSamples: "Samples",
+    workoutTarget: "Target",
+    workoutState: "Set",
+    startSet: "Start set",
     savePose: "Save pose",
     trainModel: "Train model",
     logout: "Log out",
@@ -137,6 +152,7 @@ const translations = {
     fitnessLevel: "Level",
     score: "Score",
     loginCount: "Logins",
+    completedSets: "Sets",
     currentGesture: "Aktuelle Geste",
     cameraFps: "Kamera-FPS",
     warmupTitle: "Aufwaermen",
@@ -151,6 +167,9 @@ const translations = {
     exerciseSource: "Quelle",
     exerciseReps: "Wdh.",
     exerciseSamples: "Samples",
+    workoutTarget: "Ziel",
+    workoutState: "Set",
+    startSet: "Set starten",
     savePose: "Pose speichern",
     trainModel: "Modell trainieren",
     logout: "Ausloggen",
@@ -474,7 +493,17 @@ const languageLabels: Record<Language, string> = {
 };
 
 const genderOptions = ["female", "male", "diverse", "prefer-not-to-say"] as const;
-const exerciseOptions = ["weight_lift", "jump", "arm_raises", "push_up"] as const;
+const exerciseOptions = ["weight_lift", "jump", "arm_raises"] as const;
+const exerciseExamples: Record<(typeof exerciseOptions)[number], string> = {
+  weight_lift: "/exercises/weight_lift.png",
+  jump: "/exercises/jump.png",
+  arm_raises: "/exercises/arm_raises.png",
+};
+const exerciseRules: Record<(typeof exerciseOptions)[number], string> = {
+  weight_lift: "Start with arms down. Curl at least one arm up, then lower again before the next rep.",
+  jump: "Stand still between jumps. A rep counts when both ankles move clearly upward from the baseline.",
+  arm_raises: "Start with both arms down. Raise both hands above shoulder height, then lower again.",
+};
 
 export default function Home() {
   const [language, setLanguage] = useState<Language>("en");
@@ -492,6 +521,20 @@ export default function Home() {
   const text = (key: string, fallback: string) => (t as Record<string, string>)[key] ?? fallback;
   const activeProfile = status?.activeProfile;
   const exercise = status?.exercise;
+  const workout = status?.workout;
+  const activeWorkoutExercise = workout?.exercise as (typeof exerciseOptions)[number] | undefined;
+  const exampleImage =
+    workout && workout.state !== "idle" && activeWorkoutExercise && activeWorkoutExercise in exerciseExamples
+      ? exerciseExamples[activeWorkoutExercise]
+      : null;
+  const activeExerciseRule =
+    activeWorkoutExercise && activeWorkoutExercise in exerciseRules
+      ? exerciseRules[activeWorkoutExercise]
+      : "";
+  const workoutProgress =
+    workout && workout.targetReps > 0
+      ? Math.min(100, Math.round((workout.currentReps / workout.targetReps) * 100))
+      : 0;
   const gestureText = status?.gestures.length
     ? status.gestures.map((entry) => entry.label).join(", ")
     : "unknown";
@@ -600,6 +643,16 @@ export default function Home() {
     setMessage(result.message);
   }
 
+  async function startWorkout() {
+    const response = await fetch("/api/workout/start", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ exercise: exerciseLabel }),
+    });
+    const result = (await response.json()) as { message: string };
+    setMessage(result.message);
+  }
+
   const isAuthenticated = Boolean(status?.authenticated);
   const candidates = status?.signInCandidates ?? [];
 
@@ -646,6 +699,10 @@ export default function Home() {
                   <ProfileRow label={t.bioGender} value={activeProfile?.gender ?? "-"} />
                   <ProfileRow label={t.score} value={activeProfile?.score ?? 0} />
                   <ProfileRow label={t.loginCount} value={activeProfile?.loginCount ?? 0} />
+                  <ProfileRow
+                    label={text("completedSets", "Sets")}
+                    value={activeProfile?.completedSets ?? 0}
+                  />
                 </div>
               ) : null}
             </div>
@@ -774,6 +831,10 @@ export default function Home() {
             <div className="metrics">
               <Metric label={t.fitnessLevel} value={activeProfile?.level ?? 1} />
               <Metric label={t.score} value={activeProfile?.score ?? 0} />
+              <Metric
+                label={text("completedSets", "Sets")}
+                value={activeProfile?.completedSets ?? 0}
+              />
               <Metric label={t.currentGesture} value={gestureText} />
               <Metric label={t.cameraFps} value={status?.fps ?? 0} />
             </div>
@@ -787,8 +848,29 @@ export default function Home() {
                 <Metric label={text("exerciseLabel", "Exercise")} value={exercise?.label ?? "unknown"} />
                 <Metric label={text("exerciseSource", "Source")} value={exercise?.source ?? "none"} />
                 <Metric label={text("exerciseReps", "Reps")} value={exercise?.repetitions ?? 0} />
+                <Metric
+                  label={text("workoutTarget", "Target")}
+                  value={`${workout?.currentReps ?? 0}/${workout?.targetReps ?? 5}`}
+                />
+                <Metric label={text("workoutState", "Set")} value={workout?.state ?? "idle"} />
                 <Metric label={text("exerciseSamples", "Samples")} value={status?.exerciseSampleCount ?? 0} />
               </div>
+              <div className="workoutProgress" aria-label="Workout progress">
+                <div style={{ width: `${workoutProgress}%` }} />
+              </div>
+              <div className={workout?.completed ? "message success" : "message"}>
+                {workout?.message ?? text("waiting", "Waiting for camera...")}
+              </div>
+              {exampleImage ? (
+                <div className="exerciseExample">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={exampleImage}
+                    alt={`${workout?.exercise.replace("_", " ")} example`}
+                  />
+                </div>
+              ) : null}
+              {exampleImage ? <div className="exerciseRule">{activeExerciseRule}</div> : null}
               <div className="exerciseTrainer">
                 <select
                   aria-label="Exercise label"
@@ -801,6 +883,9 @@ export default function Home() {
                     </option>
                   ))}
                 </select>
+                <button type="button" onClick={startWorkout}>
+                  {text("startSet", "Start set")}
+                </button>
                 <button type="button" onClick={() => saveExerciseSample()}>
                   {text("savePose", "Save pose")}
                 </button>

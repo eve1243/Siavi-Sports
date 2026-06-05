@@ -40,6 +40,7 @@ class ExerciseService:
         self.jump_baseline_y: float | None = None
         self.recent_labels: deque[str] = deque(maxlen=7)
         self.active_label = config.fallback_label
+        self.target_label: str | None = None
         self.load_model()
 
     @property
@@ -109,7 +110,11 @@ class ExerciseService:
         heuristic_label, heuristic_confidence, state = self.classify_with_rules(raw_points)
         model_label, model_confidence = self.classify_with_model(features)
 
-        if model_label != self.config.fallback_label and model_confidence >= 0.58:
+        if self.target_label is not None:
+            label = heuristic_label
+            confidence = heuristic_confidence
+            source = "rules"
+        elif model_label != self.config.fallback_label and model_confidence >= 0.58:
             label = model_label
             confidence = model_confidence
             source = "learned"
@@ -124,7 +129,8 @@ class ExerciseService:
             label = self.active_label
             confidence = 0.42
 
-        label = self._smooth_label(label)
+        if self.target_label is None:
+            label = self._smooth_label(label)
         repetitions = self.update_repetitions(label, state)
 
         return ExerciseDetection(
@@ -163,6 +169,20 @@ class ExerciseService:
 
         self.train()
         return True, f"Saved training sample for {cleaned_label}."
+
+    def set_target_exercise(self, label: str | None) -> None:
+        if label is None:
+            self.target_label = None
+            return
+
+        cleaned_label = label.strip().lower().replace(" ", "_")
+        if cleaned_label not in {"weight_lift", "jump", "arm_raises"}:
+            raise ValueError("Choose weight_lift, jump or arm_raises.")
+
+        self.target_label = cleaned_label
+        self.active_label = cleaned_label
+        self.recent_labels.clear()
+        self.states[cleaned_label] = "down"
 
     def train(self) -> None:
         if not self.samples_path.exists():
@@ -252,12 +272,29 @@ class ExerciseService:
         shoulder_y = float((left_shoulder_y + right_shoulder_y) / 2)
         ankle_y = float((points[27][1] + points[28][1]) / 2)
 
-        both_arms_up = left_wrist_y < left_shoulder_y and right_wrist_y < right_shoulder_y
+        if self.target_label == "weight_lift":
+            curled = left_elbow < 95 or right_elbow < 95
+            arms_low_enough = left_wrist_y > shoulder_y - 0.03 and right_wrist_y > shoulder_y - 0.03
+            confidence = 0.78 if curled and arms_low_enough else 0.58
+            return "weight_lift", confidence, "up" if curled and arms_low_enough else "down"
+
+        if self.target_label == "jump":
+            if self.jump_baseline_y is None:
+                self.jump_baseline_y = ankle_y
+            self.jump_baseline_y = self.jump_baseline_y * 0.96 + ankle_y * 0.04
+            is_airborne = ankle_y < self.jump_baseline_y - 0.035
+            return "jump", 0.72 if is_airborne else 0.56, "up" if is_airborne else "down"
+
+        if self.target_label == "arm_raises":
+            both_arms_up = left_wrist_y < left_shoulder_y - 0.04 and right_wrist_y < right_shoulder_y - 0.04
+            return "arm_raises", 0.78 if both_arms_up else 0.57, "up" if both_arms_up else "down"
+
+        both_arms_up = left_wrist_y < left_shoulder_y - 0.04 and right_wrist_y < right_shoulder_y - 0.04
         if both_arms_up:
             return "arm_raises", 0.74, "up"
 
         curled = left_elbow < 95 or right_elbow < 95
-        arms_low = left_wrist_y > shoulder_y and right_wrist_y > shoulder_y
+        arms_low = left_wrist_y > shoulder_y - 0.03 and right_wrist_y > shoulder_y - 0.03
         if curled and arms_low:
             return "weight_lift", 0.68, "up"
 
@@ -276,7 +313,7 @@ class ExerciseService:
         previous = self.states[label]
         if previous == "down" and state == "up":
             self.repetitions[label] += 1
-        self.states[label] = state
+        self.states[label] = "up" if state == "up" else "down"
         return self.repetitions[label]
 
     def _smooth_label(self, label: str) -> str:
