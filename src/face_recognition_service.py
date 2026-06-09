@@ -56,6 +56,7 @@ class FaceRecognitionService:
         self.legacy_json_path = self._legacy_path("faces.json")
         self.opencv_database_path = self._legacy_path("opencv_faces.npz")
         self.opencv_samples: list[OpenCvFaceSample] = []
+        self.opencv_training_names: list[str] = []
         self.opencv_recognizer = self._create_opencv_recognizer()
         self._ensure_database()
         self.load_profiles()
@@ -300,9 +301,9 @@ class FaceRecognitionService:
         gray = cv2.equalizeHist(gray)
         faces = self.haar_detector.detectMultiScale(
             gray,
-            scaleFactor=1.05,
-            minNeighbors=6,
-            minSize=(64, 64),
+            scaleFactor=1.08,
+            minNeighbors=5,
+            minSize=(40, 40),
         )
 
         detections: list[FaceDetection] = []
@@ -352,10 +353,14 @@ class FaceRecognitionService:
         label, distance = self.opencv_recognizer.predict(crop)
         similarity = max(0.0, 1.0 - float(distance) / max(self.config.opencv_threshold, 1.0))
 
-        if distance > self.config.opencv_threshold or label >= len(self.opencv_samples):
+        if (
+            distance > self.config.opencv_threshold
+            or similarity < self.config.recognition_threshold
+            or label >= len(self.opencv_training_names)
+        ):
             return "unknown", similarity
 
-        return self.opencv_samples[label].name, similarity
+        return self.opencv_training_names[label], similarity
 
     def register(
         self,
@@ -563,8 +568,15 @@ class FaceRecognitionService:
         if self.opencv_recognizer is None or not self.opencv_samples:
             return
 
-        images = [sample.image for sample in self.opencv_samples]
-        labels = np.arange(len(self.opencv_samples), dtype=np.int32)
+        images: list[np.ndarray] = []
+        names: list[str] = []
+        for sample in self.opencv_samples:
+            variants = self._augment_opencv_face(sample.image)
+            images.extend(variants)
+            names.extend([sample.name] * len(variants))
+
+        labels = np.arange(len(images), dtype=np.int32)
+        self.opencv_training_names = names
         self.opencv_recognizer.train(images, labels)
 
     def _create_opencv_recognizer(self):
@@ -578,3 +590,15 @@ class FaceRecognitionService:
         if face.size == 0:
             return np.zeros((160, 160), dtype=np.uint8)
         return cv2.resize(face, (160, 160), interpolation=cv2.INTER_AREA)
+
+    def _augment_opencv_face(self, image: np.ndarray) -> list[np.ndarray]:
+        base = cv2.resize(image.astype(np.uint8), (160, 160), interpolation=cv2.INTER_AREA)
+        equalized = cv2.equalizeHist(base)
+        variants = [
+            base,
+            equalized,
+            cv2.convertScaleAbs(equalized, alpha=0.85, beta=8),
+            cv2.convertScaleAbs(equalized, alpha=1.15, beta=-8),
+            cv2.GaussianBlur(equalized, (3, 3), 0),
+        ]
+        return variants

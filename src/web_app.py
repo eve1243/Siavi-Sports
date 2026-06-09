@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import threading
 import time
+from collections import deque
 from typing import Any, Optional
 
 import cv2
@@ -37,6 +38,7 @@ class ExerciseSampleRequest(BaseModel):
 
 class WorkoutStartRequest(BaseModel):
     exercise: str
+    targetReps: Optional[int] = None
 
 
 class ProgressRequest(BaseModel):
@@ -55,6 +57,9 @@ class RecognitionEngine:
         self.lock = threading.Lock()
         self.latest_jpeg: bytes | None = None
         self.latest_faces = []
+        self.recent_registration_faces: deque[tuple[float, FaceDetection]] = deque(maxlen=12)
+        self.registration_sample_window_seconds = 3.0
+        self.min_registration_samples = 3
         self.latest_gestures = []
         self.latest_exercise = None
         self.error: str | None = None
@@ -67,8 +72,10 @@ class RecognitionEngine:
         self.workout_baseline_reps = 0
         self.workout_current_reps = 0
         self.workout_target_reps = 5
+        self.workout_target_source = "level"
         self.workout_state = "idle"
         self.workout_message = "Select an exercise and start a set."
+        self.workout_guidance = "Choose an exercise, keep your full body visible, then start a set."
         self.workout_completed = False
 
     @property
@@ -143,13 +150,14 @@ class RecognitionEngine:
                 with self.lock:
                     self.latest_jpeg = encoded.tobytes()
                     self.latest_faces = faces
+                    self._remember_registration_face(faces)
                     self.latest_gestures = gestures
                     self.latest_exercise = exercise
                     self.fps = camera_frame.fps
                     self.error = None
 
                 if exercise is not None:
-                    self._update_workout(exercise.label, exercise.repetitions)
+                    self._update_workout(exercise.label, exercise.state, exercise.repetitions)
 
         except CameraError as error:
             with self.lock:
@@ -222,14 +230,18 @@ class RecognitionEngine:
                 "minFaceConfidence": self.min_face_confidence,
                 "minRecognitionConfidence": self.min_recognition_confidence,
                 "recognitionReady": self.face_service.recognition_ready,
+                "registrationSamplesReady": len(self._registration_faces_from_history()),
+                "minRegistrationSamples": self.min_registration_samples,
                 "profiles": self.face_service.registered_profiles,
                 "signInCandidates": sign_in_candidates,
                 "workout": {
                     "exercise": self.workout_exercise,
                     "currentReps": self.workout_current_reps,
                     "targetReps": self.workout_target_reps,
+                    "targetSource": self.workout_target_source,
                     "state": self.workout_state,
                     "message": self.workout_message,
+                    "guidance": self.workout_guidance,
                     "completed": self.workout_completed,
                 },
             }
@@ -237,18 +249,40 @@ class RecognitionEngine:
     def register(self, name: str, age: int | None, gender: str | None) -> tuple[bool, str]:
         with self.lock:
             faces = list(self.latest_faces)
+            registration_faces = self._registration_faces_from_history()
 
         if not faces:
             return False, "No face is visible. Look into the camera and try again."
 
-        target = max(faces, key=lambda face: (face.box[2] - face.box[0]) * (face.box[3] - face.box[1]))
+        if len(faces) > 1:
+            return False, "Only one face should be visible during registration."
+
+        if len(registration_faces) < self.min_registration_samples:
+            return (
+                False,
+                "Keep your face visible for a moment, then register again. "
+                f"{len(registration_faces)}/{self.min_registration_samples} samples are ready.",
+            )
 
         try:
-            self.face_service.register(name, target, age, gender)
+            for index, target in enumerate(registration_faces):
+                self.face_service.register(
+                    name,
+                    target,
+                    age if index == 0 else None,
+                    gender if index == 0 else None,
+                )
         except Exception as error:
             return False, str(error)
 
-        return True, f"{name} has been registered. Select the recognized face to sign in."
+        with self.lock:
+            self.recent_registration_faces.clear()
+
+        return (
+            True,
+            f"{name} has been registered with {len(registration_faces)} face samples. "
+            "Select the recognized face to sign in.",
+        )
 
     def sign_in(self, requested_name: str | None = None) -> tuple[bool, str]:
         with self.lock:
@@ -275,6 +309,7 @@ class RecognitionEngine:
         self.exercise_service.set_target_exercise(None)
         self.workout_state = "idle"
         self.workout_message = "Select an exercise and start a set."
+        self.workout_guidance = "Choose an exercise, keep your full body visible, then start a set."
 
     def add_exercise_sample(self, label: str) -> tuple[bool, str]:
         with self.lock:
@@ -285,7 +320,7 @@ class RecognitionEngine:
         self.exercise_service.train()
         return True, f"Trained on {self.exercise_service.sample_count} exercise samples."
 
-    def start_workout(self, exercise: str) -> tuple[bool, str]:
+    def start_workout(self, exercise: str, target_reps: int | None = None) -> tuple[bool, str]:
         if self.active_user is None:
             return False, "Sign in before starting a workout."
 
@@ -299,10 +334,12 @@ class RecognitionEngine:
         self.workout_exercise = cleaned_exercise
         self.workout_baseline_reps = latest_reps
         self.workout_current_reps = 0
-        self.workout_target_reps = self._target_reps_for_active_user()
+        self.workout_target_reps = self._target_reps_for_active_user(target_reps)
+        self.workout_target_source = "custom" if target_reps is not None else "level"
         self.workout_state = "running"
         self.workout_completed = False
-        self.workout_message = f"Set started: {cleaned_exercise.replace('_', ' ')}."
+        self.workout_message = f"Set started: {self._display_exercise(cleaned_exercise)}."
+        self.workout_guidance = self._guidance_for_exercise(cleaned_exercise, "down")
         return True, self.workout_message
 
     def record_progress(self, request: ProgressRequest) -> tuple[bool, str, dict[str, Any] | None]:
@@ -321,7 +358,10 @@ class RecognitionEngine:
 
         return True, "Progress saved.", profile
 
-    def _target_reps_for_active_user(self) -> int:
+    def _target_reps_for_active_user(self, target_reps: int | None = None) -> int:
+        if target_reps is not None:
+            return max(1, min(int(target_reps), 100))
+
         profile = self.face_service.get_registered_profile(self.active_user)
         level = 1
         if profile is not None:
@@ -332,21 +372,25 @@ class RecognitionEngine:
         self.workout_baseline_reps = self.exercise_service.repetitions.get(self.workout_exercise, 0)
         self.workout_current_reps = 0
         self.workout_target_reps = self._target_reps_for_active_user()
+        self.workout_target_source = "level"
         self.workout_state = "idle"
         self.workout_completed = False
         self.workout_message = "Select an exercise and start a set."
+        self.workout_guidance = "Choose an exercise, keep your full body visible, then start a set."
 
-    def _update_workout(self, label: str, total_reps: int) -> None:
+    def _update_workout(self, label: str, state: str, total_reps: int) -> None:
         if self.active_user is None or self.workout_state != "running" or self.workout_completed:
             return
 
         if label != self.workout_exercise:
-            self.workout_message = f"Waiting for {self.workout_exercise.replace('_', ' ')}."
+            self.workout_message = f"Waiting for {self._display_exercise(self.workout_exercise)}."
+            self.workout_guidance = "Show your full body and move into the exercise start position."
             return
 
         current_reps = max(0, total_reps - self.workout_baseline_reps)
         self.workout_current_reps = min(current_reps, self.workout_target_reps)
         self.workout_message = f"{self.workout_current_reps}/{self.workout_target_reps} reps."
+        self.workout_guidance = self._guidance_for_exercise(label, state)
 
         if current_reps < self.workout_target_reps:
             return
@@ -362,11 +406,78 @@ class RecognitionEngine:
         self.workout_completed = True
         self.exercise_service.set_target_exercise(None)
         self.workout_message = f"Set complete. +{score_delta} score and level up."
+        self.workout_guidance = "Set complete. Rest briefly or choose the next exercise."
+
+    def _display_exercise(self, label: str) -> str:
+        labels = {
+            "weight_lift": "Hand Weight Lifting",
+            "jump": "Jumping Jacks",
+            "arm_raises": "Arm Raises",
+        }
+        return labels.get(label, label.replace("_", " ").title())
+
+    def _guidance_for_exercise(self, label: str, state: str) -> str:
+        if label == "weight_lift":
+            return (
+                "Lower the arm before the next curl."
+                if state == "up"
+                else "Curl at least one arm upward, then return to the start position."
+            )
+        if label == "jump":
+            return (
+                "Land and stand still before the next Jumping Jack."
+                if state == "up"
+                else "Jump clearly upward from the baseline so the camera can count it."
+            )
+        if label == "arm_raises":
+            return (
+                "Lower both hands below shoulder height before the next rep."
+                if state == "up"
+                else "Raise both hands above shoulder height together."
+            )
+        return "Keep your full body visible and follow the exercise rule."
 
     def _can_sign_in_with_face(self, face: FaceDetection) -> bool:
         return (
             face.name not in {"unknown", "face"}
             and face.confidence > self.min_face_confidence
+            and face.similarity >= self.min_recognition_confidence
+        )
+
+    def _remember_registration_face(self, faces: list[FaceDetection]) -> None:
+        if len(faces) != 1:
+            return
+
+        target = faces[0]
+        if self._face_area(target) < 80 * 80:
+            return
+
+        self.recent_registration_faces.append((time.monotonic(), self._copy_face_detection(target)))
+
+    def _registration_faces_from_history(self) -> list[FaceDetection]:
+        now = time.monotonic()
+        fresh_faces = [
+            face
+            for timestamp, face in self.recent_registration_faces
+            if now - timestamp <= self.registration_sample_window_seconds
+        ]
+        if not fresh_faces:
+            return []
+
+        return fresh_faces[-5:]
+
+    def _face_area(self, face: FaceDetection) -> int:
+        x1, y1, x2, y2 = face.box
+        return max(0, x2 - x1) * max(0, y2 - y1)
+
+    def _copy_face_detection(self, face: FaceDetection) -> FaceDetection:
+        return FaceDetection(
+            box=face.box,
+            confidence=face.confidence,
+            embedding=face.embedding.copy(),
+            name=face.name,
+            similarity=face.similarity,
+            crop=face.crop.copy() if face.crop is not None else None,
         )
 
     def _create_placeholder_frame(self, text: str) -> bytes:
@@ -457,7 +568,7 @@ def train_exercise_model() -> JSONResponse:
 
 @app.post("/api/workout/start")
 def start_workout(request: WorkoutStartRequest) -> JSONResponse:
-    ok, message = engine.start_workout(request.exercise)
+    ok, message = engine.start_workout(request.exercise, request.targetReps)
     return JSONResponse({"ok": ok, "message": message}, status_code=200 if ok else 400)
 
 

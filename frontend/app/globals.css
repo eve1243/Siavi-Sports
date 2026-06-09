@@ -244,6 +244,15 @@ label {
   background: #eaf8ef;
 }
 
+.sampleHint {
+  padding: 10px 12px;
+  border: 1px solid rgba(22, 32, 52, 0.1);
+  border-radius: 8px;
+  color: #4d586b;
+  background: #f8fafd;
+  font-weight: 800;
+}
+
 .list,
 .metrics {
   display: grid;
@@ -277,7 +286,7 @@ label {
 
 .exerciseTrainer {
   display: grid;
-  grid-template-columns: minmax(160px, 1fr) auto auto auto;
+  grid-template-columns: minmax(180px, 1fr) minmax(130px, 0.45fr) auto auto auto;
   gap: 10px;
 }
 
@@ -317,6 +326,16 @@ label {
   border-radius: 8px;
   color: #39465a;
   background: #eef7ff;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+.exerciseGuidance {
+  padding: 12px 14px;
+  border: 1px solid rgba(31, 181, 109, 0.22);
+  border-radius: 8px;
+  color: #254537;
+  background: #effaf4;
   font-weight: 800;
   line-height: 1.45;
 }

@@ -12,7 +12,7 @@ face:
   detection_size: [640, 640]
   min_detection_confidence: 0.6
   recognition_threshold: 0.5
-  opencv_threshold: 72.0
+  opencv_threshold: 80.0
   database_path: data/faces.sqlite
   providers:
     - CPUExecutionProvider

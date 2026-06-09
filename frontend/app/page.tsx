@@ -36,8 +36,10 @@ type Workout = {
   exercise: string;
   currentReps: number;
   targetReps: number;
+  targetSource: string;
   state: string;
   message: string;
+  guidance: string;
   completed: boolean;
 };
 
@@ -57,6 +59,8 @@ type StatusResponse = {
   gestureError: string | null;
   gestures: Gesture[];
   recognitionReady: boolean;
+  registrationSamplesReady: number;
+  minRegistrationSamples: number;
   profiles: Profile[];
   signInCandidates: SignInCandidate[];
   workout: Workout;
@@ -494,6 +498,11 @@ const languageLabels: Record<Language, string> = {
 
 const genderOptions = ["female", "male", "diverse", "prefer-not-to-say"] as const;
 const exerciseOptions = ["weight_lift", "jump", "arm_raises"] as const;
+const exerciseLabels: Record<(typeof exerciseOptions)[number], string> = {
+  weight_lift: "Hand Weight Lifting",
+  jump: "Jumping Jacks",
+  arm_raises: "Arm Raises",
+};
 const exerciseExamples: Record<(typeof exerciseOptions)[number], string> = {
   weight_lift: "/exercises/weight_lift.png",
   jump: "/exercises/jump.png",
@@ -501,7 +510,7 @@ const exerciseExamples: Record<(typeof exerciseOptions)[number], string> = {
 };
 const exerciseRules: Record<(typeof exerciseOptions)[number], string> = {
   weight_lift: "Start with arms down. Curl at least one arm up, then lower again before the next rep.",
-  jump: "Stand still between jumps. A rep counts when both ankles move clearly upward from the baseline.",
+  jump: "Stand still between Jumping Jacks. A rep counts when both ankles move clearly upward from the baseline.",
   arm_raises: "Start with both arms down. Raise both hands above shoulder height, then lower again.",
 };
 
@@ -516,6 +525,7 @@ export default function Home() {
   const [gender, setGender] = useState<(typeof genderOptions)[number]>("female");
   const [selectedCandidate, setSelectedCandidate] = useState("");
   const [exerciseLabel, setExerciseLabel] = useState<(typeof exerciseOptions)[number]>("weight_lift");
+  const [customTarget, setCustomTarget] = useState("");
 
   const t = useMemo(() => translations[language], [language]);
   const text = (key: string, fallback: string) => (t as Record<string, string>)[key] ?? fallback;
@@ -531,6 +541,7 @@ export default function Home() {
     activeWorkoutExercise && activeWorkoutExercise in exerciseRules
       ? exerciseRules[activeWorkoutExercise]
       : "";
+  const selectedExerciseRule = exerciseRules[exerciseLabel];
   const workoutProgress =
     workout && workout.targetReps > 0
       ? Math.min(100, Math.round((workout.currentReps / workout.targetReps) * 100))
@@ -541,6 +552,7 @@ export default function Home() {
   const profileText = status?.profiles.length
     ? status.profiles.map((entry) => entry.name).join(", ")
     : t.noProfiles;
+  const registrationSampleText = `${status?.registrationSamplesReady ?? 0}/${status?.minRegistrationSamples ?? 3}`;
 
   useEffect(() => {
     const stored = localStorage.getItem("siavi-language") as Language | null;
@@ -644,10 +656,16 @@ export default function Home() {
   }
 
   async function startWorkout() {
+    const parsedTarget = customTarget.trim() ? Number(customTarget) : undefined;
+    if (parsedTarget !== undefined && (!Number.isInteger(parsedTarget) || parsedTarget < 1 || parsedTarget > 100)) {
+      setMessage("Target must be a whole number from 1 to 100.");
+      return;
+    }
+
     const response = await fetch("/api/workout/start", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ exercise: exerciseLabel }),
+      body: JSON.stringify({ exercise: exerciseLabel, targetReps: parsedTarget }),
     });
     const result = (await response.json()) as { message: string };
     setMessage(result.message);
@@ -803,6 +821,9 @@ export default function Home() {
                 <button type="button" onClick={registerFace}>
                   {t.registerButton}
                 </button>
+                <div className="sampleHint">
+                  {text("registrationSamples", "Face samples")}: {registrationSampleText}
+                </div>
               </section>
             )}
 
@@ -812,6 +833,10 @@ export default function Home() {
               <div className="list">
                 <StatusRow label={t.faceIdReady} value={status?.recognitionReady ? t.yes : t.no} />
                 <StatusRow label={t.faces} value={status?.faceCount ?? 0} />
+                <StatusRow
+                  label={text("registrationSamples", "Face samples")}
+                  value={registrationSampleText}
+                />
                 <StatusRow label={t.gestures} value={gestureText} />
                 <StatusRow label={t.profiles} value={profileText} />
               </div>
@@ -845,7 +870,14 @@ export default function Home() {
                 <p>{text("exerciseAiCopy", "Current exercise recognition with local learning.")}</p>
               </div>
               <div className="metrics">
-                <Metric label={text("exerciseLabel", "Exercise")} value={exercise?.label ?? "unknown"} />
+                <Metric
+                  label={text("exerciseLabel", "Exercise")}
+                  value={
+                    exercise?.label && exercise.label in exerciseLabels
+                      ? exerciseLabels[exercise.label as (typeof exerciseOptions)[number]]
+                      : exercise?.label ?? "unknown"
+                  }
+                />
                 <Metric label={text("exerciseSource", "Source")} value={exercise?.source ?? "none"} />
                 <Metric label={text("exerciseReps", "Reps")} value={exercise?.repetitions ?? 0} />
                 <Metric
@@ -853,6 +885,7 @@ export default function Home() {
                   value={`${workout?.currentReps ?? 0}/${workout?.targetReps ?? 5}`}
                 />
                 <Metric label={text("workoutState", "Set")} value={workout?.state ?? "idle"} />
+                <Metric label="Target mode" value={workout?.targetSource ?? "level"} />
                 <Metric label={text("exerciseSamples", "Samples")} value={status?.exerciseSampleCount ?? 0} />
               </div>
               <div className="workoutProgress" aria-label="Workout progress">
@@ -860,6 +893,9 @@ export default function Home() {
               </div>
               <div className={workout?.completed ? "message success" : "message"}>
                 {workout?.message ?? text("waiting", "Waiting for camera...")}
+              </div>
+              <div className="exerciseGuidance">
+                {workout?.guidance ?? "Choose an exercise, keep your full body visible, then start a set."}
               </div>
               {exampleImage ? (
                 <div className="exerciseExample">
@@ -870,7 +906,7 @@ export default function Home() {
                   />
                 </div>
               ) : null}
-              {exampleImage ? <div className="exerciseRule">{activeExerciseRule}</div> : null}
+              <div className="exerciseRule">{activeExerciseRule || selectedExerciseRule}</div>
               <div className="exerciseTrainer">
                 <select
                   aria-label="Exercise label"
@@ -879,10 +915,19 @@ export default function Home() {
                 >
                   {exerciseOptions.map((option) => (
                     <option key={option} value={option}>
-                      {option.replace("_", " ")}
+                      {exerciseLabels[option]}
                     </option>
                   ))}
                 </select>
+                <input
+                  aria-label="Custom repetition target"
+                  min={1}
+                  max={100}
+                  placeholder="Level target"
+                  type="number"
+                  value={customTarget}
+                  onChange={(event) => setCustomTarget(event.target.value)}
+                />
                 <button type="button" onClick={startWorkout}>
                   {text("startSet", "Start set")}
                 </button>
