@@ -25,6 +25,16 @@ POSE_CONNECTIONS = [
     (26, 28),
 ]
 
+EXERCISE_ALIASES = {
+    "weight_lift": "hand_curl",
+    "weight_lifting": "hand_curl",
+    "hand_curling": "hand_curl",
+    "bicep_curl": "hand_curl",
+    "biceps_curl": "hand_curl",
+    "curl": "hand_curl",
+}
+ALLOWED_EXERCISES = {"hand_curl", "jump", "arm_raises", "squat", "side_arm_raises"}
+
 
 class ExerciseService:
     def __init__(self, config: ExerciseConfig) -> None:
@@ -131,7 +141,7 @@ class ExerciseService:
 
         if self.target_label is None:
             label = self._smooth_label(label)
-        repetitions = self.update_repetitions(label, state)
+        repetitions = self.update_repetitions(label, state) if self.target_label is not None else 0
 
         return ExerciseDetection(
             label=label,
@@ -153,7 +163,7 @@ class ExerciseService:
         )
 
     def add_sample(self, label: str, detection: ExerciseDetection | None) -> tuple[bool, str]:
-        cleaned_label = label.strip().lower().replace(" ", "_")
+        cleaned_label = self.normalize_label(label)
         if not cleaned_label:
             return False, "Exercise label must not be empty."
         if detection is None or detection.features is None:
@@ -175,12 +185,13 @@ class ExerciseService:
             self.target_label = None
             return
 
-        cleaned_label = label.strip().lower().replace(" ", "_")
-        if cleaned_label not in {"weight_lift", "jump", "arm_raises"}:
-            raise ValueError("Choose weight_lift, jump or arm_raises.")
+        cleaned_label = self.normalize_label(label)
+        if cleaned_label not in ALLOWED_EXERCISES:
+            raise ValueError("Choose hand_curl, jump, arm_raises, squat or side_arm_raises.")
 
         self.target_label = cleaned_label
         self.active_label = cleaned_label
+        self.repetitions[cleaned_label] = 0
         self.recent_labels.clear()
         self.states[cleaned_label] = "down"
 
@@ -198,7 +209,7 @@ class ExerciseService:
             for row in reader:
                 if len(row) < 2:
                     continue
-                labels.append(row[0])
+                labels.append(self.normalize_label(row[0]))
                 rows.append([float(value) for value in row[1:]])
 
         if not rows:
@@ -269,14 +280,42 @@ class ExerciseService:
         left_shoulder_y, right_shoulder_y = points[11][1], points[12][1]
         left_elbow = self._angle(points, 11, 13, 15)
         right_elbow = self._angle(points, 12, 14, 16)
+        left_knee = self._angle(points, 23, 25, 27)
+        right_knee = self._angle(points, 24, 26, 28)
         shoulder_y = float((left_shoulder_y + right_shoulder_y) / 2)
         ankle_y = float((points[27][1] + points[28][1]) / 2)
+        hip_y = float((points[23][1] + points[24][1]) / 2)
+        knee_y = float((points[25][1] + points[26][1]) / 2)
 
-        if self.target_label == "weight_lift":
-            curled = left_elbow < 95 or right_elbow < 95
-            arms_low_enough = left_wrist_y > shoulder_y - 0.03 and right_wrist_y > shoulder_y - 0.03
-            confidence = 0.78 if curled and arms_low_enough else 0.58
-            return "weight_lift", confidence, "up" if curled and arms_low_enough else "down"
+        left_wrist_x, right_wrist_x = points[15][0], points[16][0]
+        left_shoulder_x, right_shoulder_x = points[11][0], points[12][0]
+        shoulder_width = max(abs(float(left_shoulder_x - right_shoulder_x)), 0.05)
+        wrists_outside_shoulders = (
+            left_wrist_x > max(left_shoulder_x, right_shoulder_x) + shoulder_width * 0.28
+            or right_wrist_x < min(left_shoulder_x, right_shoulder_x) - shoulder_width * 0.28
+        )
+        wrists_near_shoulders = (
+            abs(float(left_wrist_y - left_shoulder_y)) < 0.16
+            and abs(float(right_wrist_y - right_shoulder_y)) < 0.16
+        )
+        side_arms_up = wrists_outside_shoulders and wrists_near_shoulders
+
+        if self.target_label == "hand_curl":
+            return self._classify_hand_curl(
+                left_elbow,
+                right_elbow,
+                points[13][0],
+                points[14][0],
+                left_wrist_y,
+                right_wrist_y,
+                left_wrist_x,
+                right_wrist_x,
+                left_shoulder_y,
+                right_shoulder_y,
+                left_shoulder_x,
+                right_shoulder_x,
+                shoulder_width,
+            )
 
         if self.target_label == "jump":
             if self.jump_baseline_y is None:
@@ -289,14 +328,44 @@ class ExerciseService:
             both_arms_up = left_wrist_y < left_shoulder_y - 0.04 and right_wrist_y < right_shoulder_y - 0.04
             return "arm_raises", 0.78 if both_arms_up else 0.57, "up" if both_arms_up else "down"
 
+        if self.target_label == "squat":
+            knees_bent = left_knee < 132 or right_knee < 132
+            hips_lowered = hip_y > knee_y - 0.28
+            is_squat = knees_bent and hips_lowered
+            return "squat", 0.78 if is_squat else 0.57, "up" if is_squat else "down"
+
+        if self.target_label == "side_arm_raises":
+            return "side_arm_raises", 0.78 if side_arms_up else 0.57, "up" if side_arms_up else "down"
+
         both_arms_up = left_wrist_y < left_shoulder_y - 0.04 and right_wrist_y < right_shoulder_y - 0.04
         if both_arms_up:
             return "arm_raises", 0.74, "up"
 
-        curled = left_elbow < 95 or right_elbow < 95
-        arms_low = left_wrist_y > shoulder_y - 0.03 and right_wrist_y > shoulder_y - 0.03
-        if curled and arms_low:
-            return "weight_lift", 0.68, "up"
+        if side_arms_up:
+            return "side_arm_raises", 0.72, "up"
+
+        knees_bent = left_knee < 132 or right_knee < 132
+        hips_lowered = hip_y > knee_y - 0.28
+        if knees_bent and hips_lowered:
+            return "squat", 0.72, "up"
+
+        curl_label, curl_confidence, curl_state = self._classify_hand_curl(
+            left_elbow,
+            right_elbow,
+            points[13][0],
+            points[14][0],
+            left_wrist_y,
+            right_wrist_y,
+            left_wrist_x,
+            right_wrist_x,
+            left_shoulder_y,
+            right_shoulder_y,
+            left_shoulder_x,
+            right_shoulder_x,
+            shoulder_width,
+        )
+        if curl_state == "up":
+            return curl_label, max(0.68, curl_confidence), curl_state
 
         if self.jump_baseline_y is None:
             self.jump_baseline_y = ankle_y
@@ -305,6 +374,67 @@ class ExerciseService:
             return "jump", 0.66, "up"
 
         return self.config.fallback_label, 0.35, "down"
+
+    def normalize_label(self, label: str) -> str:
+        cleaned_label = label.strip().lower().replace("-", "_").replace(" ", "_")
+        return EXERCISE_ALIASES.get(cleaned_label, cleaned_label)
+
+    def _classify_hand_curl(
+        self,
+        left_elbow: float,
+        right_elbow: float,
+        left_elbow_x: float,
+        right_elbow_x: float,
+        left_wrist_y: float,
+        right_wrist_y: float,
+        left_wrist_x: float,
+        right_wrist_x: float,
+        left_shoulder_y: float,
+        right_shoulder_y: float,
+        left_shoulder_x: float,
+        right_shoulder_x: float,
+        shoulder_width: float,
+    ) -> tuple[str, float, str]:
+        left_arm_sideways = (
+            left_wrist_x > max(left_shoulder_x, right_shoulder_x) + shoulder_width * 0.24
+            and abs(float(left_wrist_y - left_shoulder_y)) < 0.20
+        )
+        right_arm_sideways = (
+            right_wrist_x < min(left_shoulder_x, right_shoulder_x) - shoulder_width * 0.24
+            and abs(float(right_wrist_y - right_shoulder_y)) < 0.20
+        )
+        if left_arm_sideways or right_arm_sideways:
+            return "hand_curl", 0.40, "down"
+
+        left_elbow_near_body = abs(float(left_elbow_x - left_shoulder_x)) < shoulder_width * 0.85
+        right_elbow_near_body = abs(float(right_elbow_x - right_shoulder_x)) < shoulder_width * 0.85
+        left_wrist_inside = left_wrist_x < max(left_shoulder_x, right_shoulder_x) + shoulder_width * 0.20
+        right_wrist_inside = right_wrist_x > min(left_shoulder_x, right_shoulder_x) - shoulder_width * 0.20
+
+        left_curled = (
+            left_elbow < 92
+            and left_wrist_y < left_shoulder_y + 0.16
+            and left_elbow_near_body
+            and left_wrist_inside
+        )
+        right_curled = (
+            right_elbow < 92
+            and right_wrist_y < right_shoulder_y + 0.16
+            and right_elbow_near_body
+            and right_wrist_inside
+        )
+        left_extended = left_elbow > 142 and left_wrist_y > left_shoulder_y + 0.22
+        right_extended = right_elbow > 142 and right_wrist_y > right_shoulder_y + 0.22
+
+        if left_curled or right_curled:
+            best_angle = min(left_elbow, right_elbow)
+            confidence = 0.74 + min(0.16, max(0.0, (92 - best_angle) / 120))
+            return "hand_curl", confidence, "up"
+
+        if left_extended or right_extended:
+            return "hand_curl", 0.62, "down"
+
+        return "hand_curl", 0.48, "down"
 
     def update_repetitions(self, label: str, state: str) -> int:
         if label == self.config.fallback_label:

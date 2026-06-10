@@ -253,6 +253,15 @@ label {
   font-weight: 800;
 }
 
+.loginHint {
+  padding: 12px 14px;
+  border-radius: 8px;
+  color: #39465a;
+  background: #eef7ff;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
 .list,
 .metrics {
   display: grid;
@@ -284,10 +293,23 @@ label {
   padding: 16px;
 }
 
+.exerciseSidePanel {
+  padding: 0;
+}
+
+.exerciseSidePanel .exercisePanel {
+  border: 0;
+  box-shadow: none;
+}
+
 .exerciseTrainer {
   display: grid;
   grid-template-columns: minmax(180px, 1fr) minmax(130px, 0.45fr) auto auto auto;
   gap: 10px;
+}
+
+.exerciseSidePanel .exerciseTrainer {
+  grid-template-columns: 1fr;
 }
 
 .workoutProgress {
@@ -351,6 +373,7 @@ label {
 @media (max-width: 880px) {
   header,
   .layout,
+  .authenticatedLayout,
   .exerciseTrainer,
   .trainingGrid {
     display: grid;

@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "SIAVI FaceID Training",
-  description: "Local FaceID and gesture training interface.",
+  title: "SportsAI Coach",
+  description: "AI-supported sports training with secure face login and motion tracking.",
 };
 
 export default function RootLayout({

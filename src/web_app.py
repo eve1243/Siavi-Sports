@@ -19,7 +19,7 @@ from domain import FaceDetection
 from exercise_service import ExerciseService
 from face_recognition_service import FaceRecognitionService
 from gesture_service import GestureService
-from overlay import draw_exercise, draw_faces, draw_gestures, draw_status
+from overlay import draw_exercise, draw_faces, draw_gestures
 
 
 class RegisterRequest(BaseModel):
@@ -68,7 +68,7 @@ class RecognitionEngine:
         self.fps = 0.0
         self.placeholder_jpeg = self._create_placeholder_frame("Waiting for camera permission")
         self.active_user: str | None = None
-        self.workout_exercise = "weight_lift"
+        self.workout_exercise = "hand_curl"
         self.workout_baseline_reps = 0
         self.workout_current_reps = 0
         self.workout_target_reps = 5
@@ -112,10 +112,18 @@ class RecognitionEngine:
                 if self.config.overlay.mirror:
                     frame = cv2.flip(frame, 1)
 
-                if camera_frame.frame_index % self.config.face.process_every_n_frames == 0:
+                with self.lock:
+                    face_login_active = self.active_user is None
+
+                if (
+                    face_login_active
+                    and camera_frame.frame_index % self.config.face.process_every_n_frames == 0
+                ):
                     faces = self.face_service.detect(frame)
-                else:
+                elif face_login_active:
                     faces = self.latest_faces
+                else:
+                    faces = []
 
                 if camera_frame.frame_index % self.config.gesture.process_every_n_frames == 0:
                     gestures = self.gesture_service.detect(frame)
@@ -127,23 +135,13 @@ class RecognitionEngine:
                 else:
                     exercise = self.latest_exercise
 
-                draw_faces(frame, faces)
-                draw_gestures(frame, gestures or [self.gesture_service.fallback()])
-                draw_exercise(frame, exercise or self.exercise_service.fallback())
-                draw_status(
-                    frame,
-                    camera_active=True,
-                    debug=True,
-                    exercise_error=self.exercise_service.import_error,
-                    exercise_ready=self.exercise_service.pose is not None,
-                    face_count=len(faces),
-                    fps=camera_frame.fps,
-                    gesture_count=len(gestures),
-                    gesture_error=self.gesture_service.import_error,
-                    gesture_ready=self.gesture_service.hands is not None,
-                )
+                if face_login_active:
+                    draw_faces(frame, faces)
+                    draw_gestures(frame, gestures or [self.gesture_service.fallback()])
+                else:
+                    draw_exercise(frame, exercise or self.exercise_service.fallback())
 
-                ok, encoded = cv2.imencode(".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY), 82])
+                ok, encoded = cv2.imencode(".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY), 94])
                 if not ok:
                     continue
 
@@ -181,6 +179,7 @@ class RecognitionEngine:
 
     def status(self) -> dict[str, Any]:
         with self.lock:
+            authenticated = self.active_user is not None
             recognized_faces = [
                 {
                     "name": face.name,
@@ -204,9 +203,12 @@ class RecognitionEngine:
                 for gesture in self.latest_gestures
             ]
             exercise = self.latest_exercise
+            if authenticated:
+                recognized_faces = []
+                sign_in_candidates = []
 
             return {
-                "authenticated": self.active_user is not None,
+                "authenticated": authenticated,
                 "authenticatedName": self.active_user,
                 "activeProfile": self.face_service.get_registered_profile(self.active_user),
                 "error": self.error,
@@ -221,7 +223,7 @@ class RecognitionEngine:
                 "exerciseReady": self.exercise_service.pose is not None,
                 "exerciseSampleCount": self.exercise_service.sample_count,
                 "exerciseLabels": self.exercise_service.learned_labels,
-                "faceCount": len(self.latest_faces),
+                "faceCount": 0 if authenticated else len(self.latest_faces),
                 "faces": recognized_faces,
                 "fps": round(self.fps, 1),
                 "gestureCount": len(self.latest_gestures),
@@ -324,15 +326,14 @@ class RecognitionEngine:
         if self.active_user is None:
             return False, "Sign in before starting a workout."
 
-        cleaned_exercise = exercise.strip().lower().replace(" ", "_")
-        allowed = {"weight_lift", "jump", "arm_raises"}
+        cleaned_exercise = self.exercise_service.normalize_label(exercise)
+        allowed = {"hand_curl", "jump", "arm_raises", "squat", "side_arm_raises"}
         if cleaned_exercise not in allowed:
-            return False, "Choose weight_lift, jump or arm_raises."
+            return False, "Choose hand_curl, jump, arm_raises, squat or side_arm_raises."
 
         self.exercise_service.set_target_exercise(cleaned_exercise)
-        latest_reps = self.exercise_service.repetitions.get(cleaned_exercise, 0)
         self.workout_exercise = cleaned_exercise
-        self.workout_baseline_reps = latest_reps
+        self.workout_baseline_reps = 0
         self.workout_current_reps = 0
         self.workout_target_reps = self._target_reps_for_active_user(target_reps)
         self.workout_target_source = "custom" if target_reps is not None else "level"
@@ -384,12 +385,15 @@ class RecognitionEngine:
 
         if label != self.workout_exercise:
             self.workout_message = f"Waiting for {self._display_exercise(self.workout_exercise)}."
-            self.workout_guidance = "Show your full body and move into the exercise start position."
+            self.workout_guidance = "That movement does not match the selected exercise. Return to the selected exercise start position."
             return
 
         current_reps = max(0, total_reps - self.workout_baseline_reps)
         self.workout_current_reps = min(current_reps, self.workout_target_reps)
-        self.workout_message = f"{self.workout_current_reps}/{self.workout_target_reps} reps."
+        if self.workout_current_reps == 0 and state != "up":
+            self.workout_message = "No repetition counted yet."
+        else:
+            self.workout_message = f"{self.workout_current_reps}/{self.workout_target_reps} reps."
         self.workout_guidance = self._guidance_for_exercise(label, state)
 
         if current_reps < self.workout_target_reps:
@@ -410,18 +414,21 @@ class RecognitionEngine:
 
     def _display_exercise(self, label: str) -> str:
         labels = {
-            "weight_lift": "Hand Weight Lifting",
+            "hand_curl": "Hand Curling",
+            "weight_lift": "Hand Curling",
             "jump": "Jumping Jacks",
             "arm_raises": "Arm Raises",
+            "squat": "Squat",
+            "side_arm_raises": "Side Arm Raises",
         }
         return labels.get(label, label.replace("_", " ").title())
 
     def _guidance_for_exercise(self, label: str, state: str) -> str:
-        if label == "weight_lift":
+        if label in {"hand_curl", "weight_lift"}:
             return (
-                "Lower the arm before the next curl."
+                "Extend the elbow before the next curl."
                 if state == "up"
-                else "Curl at least one arm upward, then return to the start position."
+                else "Keep the elbow near your body and curl one hand toward the shoulder."
             )
         if label == "jump":
             return (
@@ -434,6 +441,18 @@ class RecognitionEngine:
                 "Lower both hands below shoulder height before the next rep."
                 if state == "up"
                 else "Raise both hands above shoulder height together."
+            )
+        if label == "squat":
+            return (
+                "Stand tall again before the next squat."
+                if state == "up"
+                else "Bend your knees into a controlled squat."
+            )
+        if label == "side_arm_raises":
+            return (
+                "Lower both arms before the next side raise."
+                if state == "up"
+                else "Raise both arms sideways to shoulder height."
             )
         return "Keep your full body visible and follow the exercise rule."
 
@@ -508,7 +527,7 @@ class RecognitionEngine:
 
 
 engine = RecognitionEngine()
-app = FastAPI(title="SIAVI FaceID Login")
+app = FastAPI(title="SportsAI Coach")
 
 
 @app.on_event("startup")

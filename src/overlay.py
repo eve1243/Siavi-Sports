@@ -77,7 +77,7 @@ def draw_status(
     debug: bool,
     exercise_error: str | None = None,
     exercise_ready: bool,
-    face_count: int,
+    face_count: int | None,
     fps: float,
     gesture_count: int,
     gesture_error: str | None = None,
@@ -93,12 +93,15 @@ def draw_status(
 
     status_lines = [
         f"Camera: {'active' if camera_active else 'inactive'}",
-        f"Faces: {face_count}",
         f"Gestures: {gesture_count if gesture_count else 'unknown'}",
         f"Gesture tracking: {gesture_status}",
         f"Exercise AI: {exercise_status}",
-        "Keys: q quit | r register face | s snapshot | d debug",
+        "Keys: q quit | s snapshot | d debug",
     ]
+
+    if face_count is not None:
+        status_lines.insert(1, f"Faces: {face_count}")
+        status_lines[-1] = "Keys: q quit | r register face | s snapshot | d debug"
 
     if debug:
         status_lines.insert(1, f"FPS: {fps:.1f}")
