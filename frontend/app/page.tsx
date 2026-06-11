@@ -8,11 +8,14 @@ type Profile = {
   name: string;
   age: number | null;
   gender: string | null;
+  fitnessLevel: FitnessLevel | null;
   level: number;
   score: number;
   loginCount: number;
   completedSets: number;
 };
+
+type FitnessLevel = "beginner" | "active" | "fit" | "athlete";
 
 type SignInCandidate = {
   name: string;
@@ -63,6 +66,7 @@ type StatusResponse = {
   recognitionReady: boolean;
   registrationSamplesReady: number;
   minRegistrationSamples: number;
+  nextRegistrationPose: string;
   profiles: Profile[];
   signInCandidates: SignInCandidate[];
   workout: Workout;
@@ -89,6 +93,11 @@ const translations = {
     genderMale: "Male",
     genderDiverse: "Diverse",
     genderPrivate: "Prefer not to say",
+    initialFitnessLabel: "Current fitness",
+    fitnessBeginner: "Beginner",
+    fitnessActive: "Active",
+    fitnessFit: "Fit",
+    fitnessAthlete: "Athlete",
     registerButton: "Register profile",
     statusTitle: "Status",
     trainingCopy: "This training area is visible after secure login.",
@@ -109,6 +118,16 @@ const translations = {
     sessionCopy: "Training logic can be expanded here next.",
     exerciseAiTitle: "Exercise AI",
     exerciseAiCopy: "Current exercise recognition with local learning.",
+    trainingPlansTitle: "Training plans",
+    trainingPlansCopy: "Three ready-made plans are selected for your fitness level and adjusted by age group.",
+    ageGroupLabel: "Age group",
+    planStart: "Start plan",
+    nextPlanStep: "Next exercise",
+    planStepLabel: "Step",
+    planCompleted: "Plan completed.",
+    youngAgeGroup: "Under 18",
+    adultAgeGroup: "18-49",
+    matureAgeGroup: "50+",
     exerciseLabel: "Exercise",
     exerciseSource: "Source",
     exerciseReps: "Reps",
@@ -214,6 +233,19 @@ const translations = {
     detectedUser: "Detected",
     loginReadyHint: "Camera is ready. Keep your face centered and continue.",
     loginWaitingHint: "Waiting for the camera. Check camera permission if this takes too long.",
+    registrationSamples: "Face samples",
+    captureFaceSample: "Capture sample",
+    clearFaceSamples: "Reset samples",
+    faceSampleInstruction: "Capture three angles of the same face: front, slight left, slight right.",
+    nextFacePose: "Next angle",
+    facePoseFront: "front",
+    facePoseLeft: "slight left",
+    facePoseRight: "slight right",
+    samplesRequiredMessage: "Capture 3 face samples before registering.",
+    samplesReadyMessage: "All face samples are ready. You can register the profile now.",
+    faceSamplesClearedMessage: "Face samples cleared.",
+    moveCloserFaceMessage: "Move closer to the camera before saving this face sample.",
+    oneFaceRegistrationMessage: "Only one face should be visible during registration.",
   },
   de: {
     appTitle: "SportsAI Coach",
@@ -235,6 +267,11 @@ const translations = {
     genderMale: "Maennlich",
     genderDiverse: "Divers",
     genderPrivate: "Keine Angabe",
+    initialFitnessLabel: "Aktuelle Fitness",
+    fitnessBeginner: "Anfaenger",
+    fitnessActive: "Aktiv",
+    fitnessFit: "Fit",
+    fitnessAthlete: "Athletisch",
     registerButton: "Profil registrieren",
     statusTitle: "Status",
     trainingCopy: "Dieser Trainingsbereich ist nach dem sicheren Login sichtbar.",
@@ -255,6 +292,16 @@ const translations = {
     sessionCopy: "Die Trainingslogik kann hier weiter ausgebaut werden.",
     exerciseAiTitle: "Uebungs-KI",
     exerciseAiCopy: "Aktuelle Uebungserkennung mit lokalem Mitlernen.",
+    trainingPlansTitle: "Trainingsplaene",
+    trainingPlansCopy: "Drei fertige Plaene werden nach Fitnesslevel ausgewaehlt und nach Altersgruppe angepasst.",
+    ageGroupLabel: "Altersgruppe",
+    planStart: "Plan starten",
+    nextPlanStep: "Naechste Uebung",
+    planStepLabel: "Schritt",
+    planCompleted: "Plan abgeschlossen.",
+    youngAgeGroup: "Unter 18",
+    adultAgeGroup: "18-49",
+    matureAgeGroup: "50+",
     exerciseLabel: "Uebung",
     exerciseSource: "Quelle",
     exerciseReps: "Wdh.",
@@ -360,6 +407,19 @@ const translations = {
     detectedUser: "Erkannt",
     loginReadyHint: "Kamera ist bereit. Halte dein Gesicht mittig und fahre fort.",
     loginWaitingHint: "Warte auf die Kamera. Pruefe die Kameraberechtigung, wenn es zu lange dauert.",
+    registrationSamples: "Gesichtsaufnahmen",
+    captureFaceSample: "Aufnahme speichern",
+    clearFaceSamples: "Aufnahmen neu starten",
+    faceSampleInstruction: "Speichere drei Winkel vom gleichen Gesicht: vorne, leicht links, leicht rechts.",
+    nextFacePose: "Naechster Winkel",
+    facePoseFront: "vorne",
+    facePoseLeft: "leicht links",
+    facePoseRight: "leicht rechts",
+    samplesRequiredMessage: "Speichere 3 Gesichtsaufnahmen, bevor du registrierst.",
+    samplesReadyMessage: "Alle Gesichtsaufnahmen sind bereit. Du kannst das Profil registrieren.",
+    faceSamplesClearedMessage: "Gesichtsaufnahmen geloescht.",
+    moveCloserFaceMessage: "Geh naeher zur Kamera, bevor du diese Gesichtsaufnahme speicherst.",
+    oneFaceRegistrationMessage: "Bei der Registrierung darf nur ein Gesicht sichtbar sein.",
   },
   pt: {
     appTitle: "SportsAI Coach",
@@ -381,6 +441,11 @@ const translations = {
     genderMale: "Masculino",
     genderDiverse: "Diverso",
     genderPrivate: "Prefiro nao dizer",
+    initialFitnessLabel: "Condicao fisica atual",
+    fitnessBeginner: "Iniciante",
+    fitnessActive: "Ativo",
+    fitnessFit: "Em forma",
+    fitnessAthlete: "Atleta",
     registerButton: "Registar perfil",
     statusTitle: "Estado",
     trainingCopy: "Esta area de treino aparece depois do login seguro.",
@@ -401,6 +466,16 @@ const translations = {
     levelProgress: "Proximo nivel",
     exerciseAiTitle: "IA de exercicio",
     exerciseAiCopy: "Reconhecimento atual do exercicio com aprendizagem local.",
+    trainingPlansTitle: "Planos de treino",
+    trainingPlansCopy: "Tres planos prontos sao escolhidos pelo teu nivel e ajustados por idade.",
+    ageGroupLabel: "Grupo etario",
+    planStart: "Iniciar plano",
+    nextPlanStep: "Proximo exercicio",
+    planStepLabel: "Passo",
+    planCompleted: "Plano concluido.",
+    youngAgeGroup: "Menos de 18",
+    adultAgeGroup: "18-49",
+    matureAgeGroup: "50+",
     exerciseLabel: "Exercicio",
     exerciseSource: "Origem",
     exerciseReps: "Reps",
@@ -506,6 +581,19 @@ const translations = {
     detectedUser: "Reconhecido",
     loginReadyHint: "A camara esta pronta. Mantem o rosto centrado e continua.",
     loginWaitingHint: "A espera da camara. Verifica a permissao da camara se demorar muito.",
+    registrationSamples: "Amostras do rosto",
+    captureFaceSample: "Capturar amostra",
+    clearFaceSamples: "Reiniciar amostras",
+    faceSampleInstruction: "Captura tres angulos do mesmo rosto: frente, esquerda leve, direita leve.",
+    nextFacePose: "Proximo angulo",
+    facePoseFront: "frente",
+    facePoseLeft: "esquerda leve",
+    facePoseRight: "direita leve",
+    samplesRequiredMessage: "Captura 3 amostras do rosto antes de registar.",
+    samplesReadyMessage: "Todas as amostras estao prontas. Podes registar o perfil.",
+    faceSamplesClearedMessage: "Amostras do rosto limpas.",
+    moveCloserFaceMessage: "Aproxima-te da camara antes de guardar esta amostra.",
+    oneFaceRegistrationMessage: "So um rosto deve estar visivel durante o registo.",
   },
   sr: {
     appTitle: "SportsAI Coach",
@@ -527,6 +615,11 @@ const translations = {
     genderMale: "Muski",
     genderDiverse: "Razlicito",
     genderPrivate: "Ne zelim da kazem",
+    initialFitnessLabel: "Trenutna forma",
+    fitnessBeginner: "Pocetnik",
+    fitnessActive: "Aktivan",
+    fitnessFit: "Spreman",
+    fitnessAthlete: "Atleta",
     registerButton: "Registruj profil",
     statusTitle: "Status",
     trainingCopy: "Ovaj trening deo je vidljiv posle bezbedne prijave.",
@@ -547,6 +640,16 @@ const translations = {
     levelProgress: "Sledeci nivo",
     exerciseAiTitle: "AI za vezbe",
     exerciseAiCopy: "Trenutno prepoznavanje vezbe sa lokalnim ucenjem.",
+    trainingPlansTitle: "Planovi treninga",
+    trainingPlansCopy: "Tri gotova plana biraju se po tvojoj formi i prilagodjavaju godinama.",
+    ageGroupLabel: "Starosna grupa",
+    planStart: "Pokreni plan",
+    nextPlanStep: "Sledeca vezba",
+    planStepLabel: "Korak",
+    planCompleted: "Plan zavrsen.",
+    youngAgeGroup: "Ispod 18",
+    adultAgeGroup: "18-49",
+    matureAgeGroup: "50+",
     exerciseLabel: "Vezba",
     exerciseSource: "Izvor",
     exerciseReps: "Ponavljanja",
@@ -652,152 +755,193 @@ const translations = {
     detectedUser: "Prepoznato",
     loginReadyHint: "Kamera je spremna. Drzi lice na sredini i nastavi.",
     loginWaitingHint: "Ceka se kamera. Proveri dozvolu za kameru ako traje predugo.",
+    registrationSamples: "Uzorci lica",
+    captureFaceSample: "Sacuvaj uzorak",
+    clearFaceSamples: "Resetuj uzorke",
+    faceSampleInstruction: "Sacuvaj tri ugla istog lica: napred, blago levo, blago desno.",
+    nextFacePose: "Sledeci ugao",
+    facePoseFront: "napred",
+    facePoseLeft: "blago levo",
+    facePoseRight: "blago desno",
+    samplesRequiredMessage: "Sacuvaj 3 uzorka lica pre registracije.",
+    samplesReadyMessage: "Svi uzorci lica su spremni. Mozes registrovati profil.",
+    faceSamplesClearedMessage: "Uzorci lica su obrisani.",
+    moveCloserFaceMessage: "Pridji kameri pre cuvanja ovog uzorka.",
+    oneFaceRegistrationMessage: "Samo jedno lice treba da bude vidljivo tokom registracije.",
   },
   zh: {
     appTitle: "SportsAI Coach",
-    appSubtitle: "? AI ??????????????????????",
-    signedOut: "未登录",
+    appSubtitle: "人工智能支持的运动训练，具有安全的面部登录和运动跟踪。",
+    signedOut: "已退出",
     signedIn: "已登录",
-    signIn: "登录",
-    register: "注册",
-    signInTitle: "????????",
-    signInCopy: "???????????????????????",
-    recognizedFaceLabel: "识别到的人脸",
-    signInButton: "登录",
-    registerTitle: "创建资料",
-    registerCopy: "输入个人资料，并保持脸部在画面中。",
+    signIn: "登入",
+    register: "登记",
+    signInTitle: "人脸识别登录",
+    signInCopy: "看着相机。如果识别了多个人，请选择应由谁登录。",
+    recognizedFaceLabel: "认出的面孔",
+    signInButton: "登入",
+    registerTitle: "创建个人资料",
+    registerCopy: "输入您的个人资料详细信息并保持您的脸部可见。",
     nameLabel: "姓名",
     ageLabel: "年龄",
     genderLabel: "性别",
     genderFemale: "女性",
     genderMale: "男性",
-    genderDiverse: "多元",
-    genderPrivate: "不愿透露",
-    registerButton: "注册资料",
-    statusTitle: "状态",
-    trainingCopy: "?????????????",
+    genderDiverse: "各种各样的",
+    genderPrivate: "宁愿不说",
+    initialFitnessLabel: "目前的健身状况",
+    fitnessBeginner: "初学者",
+    fitnessActive: "积极的",
+    fitnessFit: "合身",
+    fitnessAthlete: "运动员",
+    registerButton: "注册个人资料",
+    statusTitle: "地位",
+    trainingCopy: "安全登录后该培训区域可见。",
     bioAge: "年龄",
     bioGender: "性别",
     fitnessLevel: "等级",
     score: "分数",
-    loginCount: "登录次数",
+    loginCount: "登录",
     currentGesture: "当前手势",
-    cameraFps: "摄像头 FPS",
+    cameraFps: "相机帧率",
     warmupTitle: "热身",
-    warmupCopy: "保持双手可见，并跟随手势反馈。",
+    warmupCopy: "保持双手可见并遵循手势反馈。",
     gestureTitle: "手势练习",
-    gestureCopy: "尝试张开手、握拳、点赞、剪刀手和指向。",
-    sessionTitle: "训练",
-    sessionCopy: "训练逻辑可以在这里继续扩展。",
-    completedSets: "??",
-    levelProgress: "下一级",
-    exerciseAiTitle: "?? AI",
-    exerciseAiCopy: "???????????????",
-    exerciseLabel: "??",
-    exerciseSource: "??",
-    exerciseReps: "??",
-    exerciseSamples: "??",
-    workoutTarget: "??",
-    workoutState: "?",
-    targetMode: "????",
-    customTargetLabel: "???????",
-    levelTargetPlaceholder: "????",
-    defaultExerciseGuidance: "?????????????????????",
-    invalidTargetMessage: "????? 1 ? 100 ??????",
-    moveStartGuidance: "??????????????",
-    wrongExerciseGuidance: "??????????????????????????",
-    noRepCountedMessage: "?????????",
-    restGuidance: "??????????????????",
-    curlUpGuidance: "???????????????????",
-    curlDownGuidance: "????????????",
-    jumpUpGuidance: "?????????????????",
-    jumpDownGuidance: "???????????????",
-    armRaiseUpGuidance: "??????????",
-    armRaiseDownGuidance: "????????????????",
-    squatUpGuidance: "??????????",
-    squatDownGuidance: "???????????",
-    sideRaiseUpGuidance: "????????????",
-    sideRaiseDownGuidance: "????????????",
-    genericExerciseGuidance: "??????????????",
-    trainingTitle: "??",
-    startSet: "????",
-    savePose: "????",
-    trainModel: "????",
-    languageSelect: "??",
-    cameraAlt: "??????????????",
-    workoutProgressLabel: "????",
-    exerciseSelectLabel: "??",
-    exerciseExampleAlt: "????",
-    unknown: "??",
-    noneValue: "?",
-    idle: "??",
-    running: "???",
-    completed: "???",
-    up: "?",
-    down: "?",
-    rules: "??",
-    model: "??",
-    level: "??",
-    custom: "???",
-    openHand: "???",
-    fist: "??",
-    thumbsUp: "??",
-    peace: "????",
-    pointing: "??",
-    handCurl: "????",
-    jumpExercise: "??",
-    armRaises: "??",
-    squatExercise: "??",
-    sideArmRaises: "???",
-    handCurlRule: "????????????????????????????????",
-    jumpRule: "???????????????????????????",
-    armRaisesRule: "??????????????????????",
-    squatRule: "??????????????????????",
-    sideArmRaisesRule: "???????????????????????",
-    backendDown: "???? http://127.0.0.1:8000 ??",
-    selectExerciseMessage: "????????????",
-    noFaceVisibleMessage: "????????????????",
-    noRegisteredFaceMessage: "????????????",
-    signInBeforeWorkoutMessage: "??????????",
-    signInBeforeProgressMessage: "??????????",
-    chooseExerciseMessage: "?????????????????????",
-    progressSavedMessage: "??????",
-    signedOutMessage: "??????",
-    welcomeBackPrefix: "????",
-    registeredSuffix: "????????????????",
-    recognizedPrefix: "???",
-    notPrefix: "??",
-    trainedPrefix: "???",
-    trainedSuffix: "????????",
-    setStartedPrefix: "?????",
-    waitingForPrefix: "??",
-    repsSuffix: "??",
-    setCompletePrefix: "?????",
-    scoreAndLevelUpSuffix: "?????",
+    gestureCopy: "尝试张开手、握拳、竖起大拇指、平静和指点。",
+    sessionTitle: "会议",
+    sessionCopy: "接下来可以在这里扩展训练逻辑。",
+    completedSets: "套",
+    levelProgress: "下一个级别",
+    exerciseAiTitle: "锻炼人工智能",
+    exerciseAiCopy: "当前的练习识别与本地学习。",
+    trainingPlansTitle: "培训计划",
+    trainingPlansCopy: "根据您的健身水平选择三个现成的计划，并按年龄段进行调整。",
+    ageGroupLabel: "年龄组",
+    planStart: "启动计划",
+    nextPlanStep: "下一个练习",
+    planStepLabel: "步",
+    planCompleted: "计划完成。",
+    youngAgeGroup: "18岁以下",
+    adultAgeGroup: "18-49",
+    matureAgeGroup: "50+",
+    exerciseLabel: "锻炼",
+    exerciseSource: "来源",
+    exerciseReps: "代表",
+    exerciseSamples: "样品",
+    workoutTarget: "目标",
+    workoutState: "放",
+    targetMode: "目标模式",
+    customTargetLabel: "自定义重复目标",
+    levelTargetPlaceholder: "水平目标",
+    defaultExerciseGuidance: "选择一项练习，保持全身可见，然后开始一组。",
+    invalidTargetMessage: "目标必须是 1 到 100 之间的整数。",
+    moveStartGuidance: "显示您的全身并进入锻炼开始位置。",
+    wrongExerciseGuidance: "该动作与所选练习不匹配。返回到选定的锻炼开始位置。",
+    noRepCountedMessage: "尚未计算重复次数。",
+    restGuidance: "设置完成。短暂休息或选择下一个练习。",
+    curlUpGuidance: "保持肘部靠近身体，并将一只手向肩膀弯曲。",
+    curlDownGuidance: "在下一次弯举之前伸展肘部。",
+    jumpUpGuidance: "从基线明显向上跳跃，以便相机可以计数。",
+    jumpDownGuidance: "在下一个杰克跳跃前着陆并保持静止。",
+    armRaiseUpGuidance: "双手一起举至肩高以上。",
+    armRaiseDownGuidance: "在进行下一次动作之前，将双手放低至肩高以下。",
+    squatUpGuidance: "弯曲膝盖，进行有控制的下蹲。",
+    squatDownGuidance: "在下一次深蹲之前再次站直。",
+    sideRaiseUpGuidance: "将双臂侧向举至肩高。",
+    sideRaiseDownGuidance: "在下一侧举起之前放下双臂。",
+    genericExerciseGuidance: "保持全身可见并遵守锻炼规则。",
+    trainingTitle: "训练",
+    startSet: "开始设置",
+    savePose: "保存姿势",
+    trainModel: "火车模型",
+    languageSelect: "语言",
+    cameraAlt: "带有运动追踪覆盖的实时摄像头",
+    workoutProgressLabel: "锻炼进度",
+    exerciseSelectLabel: "锻炼",
+    exerciseExampleAlt: "练习例子",
+    unknown: "未知",
+    noneValue: "没有任何",
+    idle: "闲置的",
+    running: "跑步",
+    completed: "完全的",
+    up: "向上",
+    down: "向下",
+    rules: "规则",
+    model: "模型",
+    level: "等级",
+    custom: "风俗",
+    openHand: "张开手",
+    fist: "拳头",
+    thumbsUp: "竖起大拇指",
+    peace: "和平",
+    pointing: "指点",
+    handCurl: "手冰壶",
+    jumpExercise: "跳",
+    armRaises: "手臂举起",
+    squatExercise: "蹲",
+    sideArmRaises: "侧臂举起",
+    handCurlRule: "从肘部伸展开始。将一只手向肩膀弯曲，然后在下一次动作之前再次伸展肘部。",
+    jumpRule: "在跳跃之间保持静止。当两个脚踝都从基线明显向上移动时，一次就算作一次。",
+    armRaisesRule: "从双臂向下开始。将双手举至肩高以上，然后再次放下。",
+    squatRule: "挺立。弯曲膝盖进行下蹲，然后在下一次动作之前再次站直。",
+    sideArmRaisesRule: "从双臂向下开始。将双臂举至肩部高度，然后再次放下。",
+    backendDown: "后端未在 http://127.0.0.1:8000 上运行",
+    selectExerciseMessage: "选择一个练习并开始一组。",
+    noFaceVisibleMessage: "看不到脸。看着相机并重试。",
+    noRegisteredFaceMessage: "尚未识别注册的脸部。",
+    signInBeforeWorkoutMessage: "开始锻炼前先登录。",
+    signInBeforeProgressMessage: "保存进度之前先登录。",
+    chooseExerciseMessage: "选择手弯举、跳跃、举臂、深蹲或侧举臂。",
+    progressSavedMessage: "进度已保存。",
+    signedOutMessage: "已退出。",
+    welcomeBackPrefix: "欢迎回来",
+    registeredSuffix: "已被注册。选择已识别的面孔进行登录。",
+    recognizedPrefix: "认可",
+    notPrefix: "不是",
+    trainedPrefix: "受训于",
+    trainedSuffix: "练习样本。",
+    setStartedPrefix: "设置开始",
+    waitingForPrefix: "等待",
+    repsSuffix: "代表。",
+    setCompletePrefix: "设置完成。",
+    scoreAndLevelUpSuffix: "得分并升级。",
     levelUpPrefix: "升级！等级",
-    levelUnlockedSuffix: "已解锁。",
-    scoreSuffix: "分。",
-    setsTowardLevelSuffix: "组到下一级。",
-    completeMoreSetsPrefix: "完成",
-    moreSetsLevelSuffix: "更多组即可到达下一级。",
+    levelUnlockedSuffix: "解锁。",
+    scoreSuffix: "分数。",
+    setsTowardLevelSuffix: "迈向新的水平。",
+    completeMoreSetsPrefix: "完全的",
+    moreSetsLevelSuffix: "更多组以达到下一个级别。",
     newChallengePrefix: "新挑战：",
-    setWithRepsConnector: "组，每组",
-    repsEachSuffix: "次。",
-    logout: "退出登录",
-    waiting: "正在等待摄像头...",
-    enterName: "请输入姓名。",
-    enterAge: "请输入有效年龄。",
-    noProfiles: "无",
-    yes: "是",
-    no: "否",
-    faces: "人脸",
+    setWithRepsConnector: "设置为",
+    repsEachSuffix: "每个代表。",
+    logout: "退出",
+    waiting: "等待相机...",
+    enterName: "请输入您的姓名。",
+    enterAge: "请输入有效的年龄。",
+    noProfiles: "没有任何",
+    yes: "是的",
+    no: "不",
+    faces: "面孔",
     gestures: "手势",
-    profiles: "资料",
-    faceIdReady: "???????",
-    noRecognizedFace: "尚未识别到人脸",
-    detectedUser: "???",
-    loginReadyHint: "??????????????????????",
-    loginWaitingHint: "????????????????????????",
+    profiles: "型材",
+    faceIdReady: "人脸登录准备就绪",
+    noRecognizedFace: "尚未识别出面孔",
+    detectedUser: "检测到",
+    loginReadyHint: "相机准备好了。保持脸部居中并继续。",
+    loginWaitingHint: "等待相机。如果这花费的时间太长，请检查相机权限。",
+    registrationSamples: "人脸样本",
+    captureFaceSample: "采集样本",
+    clearFaceSamples: "重置样本",
+    faceSampleInstruction: "捕捉同一张脸的三个角度：正面、微左、微右。",
+    nextFacePose: "下一个角度",
+    facePoseFront: "正面",
+    facePoseLeft: "稍微向左",
+    facePoseRight: "稍微偏右",
+    samplesRequiredMessage: "注册前采集 3 个面部样本。",
+    samplesReadyMessage: "所有面部样本均已准备就绪。您现在可以注册个人资料。",
+    faceSamplesClearedMessage: "面部样本已清除。",
+    moveCloserFaceMessage: "在保存此面部样本之前，靠近相机。",
+    oneFaceRegistrationMessage: "注册期间只能看到一张脸。",
   },
   fr: {
     appTitle: "SportsAI Coach",
@@ -819,6 +963,11 @@ const translations = {
     genderMale: "Homme",
     genderDiverse: "Divers",
     genderPrivate: "Préfère ne pas répondre",
+    initialFitnessLabel: "Forme actuelle",
+    fitnessBeginner: "Debutant",
+    fitnessActive: "Actif",
+    fitnessFit: "En forme",
+    fitnessAthlete: "Athlete",
     registerButton: "Inscrire le profil",
     statusTitle: "Statut",
     trainingCopy: "Cette zone d'entrainement est visible apres la connexion securisee.",
@@ -839,6 +988,16 @@ const translations = {
     levelProgress: "Niveau suivant",
     exerciseAiTitle: "IA d'exercice",
     exerciseAiCopy: "Reconnaissance actuelle de l'exercice avec apprentissage local.",
+    trainingPlansTitle: "Plans d'entrainement",
+    trainingPlansCopy: "Trois plans prets sont choisis selon votre niveau et ajustes par age.",
+    ageGroupLabel: "Groupe d'age",
+    planStart: "Demarrer le plan",
+    nextPlanStep: "Exercice suivant",
+    planStepLabel: "Etape",
+    planCompleted: "Plan termine.",
+    youngAgeGroup: "Moins de 18",
+    adultAgeGroup: "18-49",
+    matureAgeGroup: "50+",
     exerciseLabel: "Exercice",
     exerciseSource: "Source",
     exerciseReps: "Reps",
@@ -944,30 +1103,48 @@ const translations = {
     detectedUser: "Reconnu",
     loginReadyHint: "La camera est prete. Gardez votre visage centre et continuez.",
     loginWaitingHint: "En attente de la camera. Verifiez les autorisations si cela dure trop longtemps.",
+    registrationSamples: "Echantillons du visage",
+    captureFaceSample: "Capturer",
+    clearFaceSamples: "Reinitialiser",
+    faceSampleInstruction: "Capturez trois angles du meme visage : face, legerement gauche, legerement droite.",
+    nextFacePose: "Angle suivant",
+    facePoseFront: "face",
+    facePoseLeft: "legerement gauche",
+    facePoseRight: "legerement droite",
+    samplesRequiredMessage: "Capturez 3 echantillons du visage avant l'inscription.",
+    samplesReadyMessage: "Tous les echantillons sont prets. Vous pouvez inscrire le profil.",
+    faceSamplesClearedMessage: "Echantillons du visage effaces.",
+    moveCloserFaceMessage: "Rapprochez-vous de la camera avant de capturer cet echantillon.",
+    oneFaceRegistrationMessage: "Un seul visage doit etre visible pendant l'inscription.",
   },
   ta: {
     appTitle: "SportsAI Coach",
-    appSubtitle: "AI ????????? ?????????? ???????, ??????????? ??? ????????? ??????? ????? ???????????.",
-    signedOut: "வெளியேறியது",
-    signedIn: "உள்நுழைந்தது",
-    signIn: "உள்நுழை",
-    register: "பதிவு",
-    signInTitle: "??? ???????? ????? ???????",
-    signInCopy: "??????? ???????? ?????????. ?????? ??????? ???????? ???????????? ???????? ????????; ???? ????????? ???? ???????? ???????? ???????? ?????? ?????????.",
-    recognizedFaceLabel: "அடையாளம் கண்ட முகம்",
-    signInButton: "உள்நுழை",
-    registerTitle: "சுயவிவரம் உருவாக்கு",
-    registerCopy: "உங்கள் விவரங்களை உள்ளிட்டு முகத்தை தெளிவாகக் காட்டுங்கள்.",
+    appSubtitle: "பாதுகாப்பான முக உள்நுழைவு மற்றும் மோஷன் டிராக்கிங்குடன் AI-ஆதரவு விளையாட்டுப் பயிற்சி.",
+    signedOut: "வெளியேறினார்",
+    signedIn: "உள்நுழைந்துள்ளீர்கள்",
+    signIn: "உள்நுழைக",
+    register: "பதிவு செய்யுங்கள்",
+    signInTitle: "முகம் அறிதல் மூலம் உள்நுழையவும்",
+    signInCopy: "கேமராவில் பாருங்கள். ஒன்றுக்கும் மேற்பட்ட நபர்கள் அங்கீகரிக்கப்பட்டிருந்தால், யார் உள்நுழைய வேண்டும் என்பதைத் தேர்வுசெய்யவும்.",
+    recognizedFaceLabel: "அடையாளம் தெரிந்த முகம்",
+    signInButton: "உள்நுழைக",
+    registerTitle: "சுயவிவரத்தை உருவாக்கவும்",
+    registerCopy: "உங்கள் சுயவிவர விவரங்களை உள்ளிட்டு உங்கள் முகம் தெரியும்படி வைக்கவும்.",
     nameLabel: "பெயர்",
     ageLabel: "வயது",
     genderLabel: "பாலினம்",
     genderFemale: "பெண்",
     genderMale: "ஆண்",
-    genderDiverse: "பல்வேறு",
-    genderPrivate: "சொல்ல விரும்பவில்லை",
-    registerButton: "சுயவிவரம் பதிவு செய்",
+    genderDiverse: "பலதரப்பட்ட",
+    genderPrivate: "சொல்லாமல் இருக்க விருப்பம்",
+    initialFitnessLabel: "தற்போதைய உடற்பயிற்சி",
+    fitnessBeginner: "ஆரம்பநிலை",
+    fitnessActive: "செயலில்",
+    fitnessFit: "பொருத்தம்",
+    fitnessAthlete: "தடகள வீரர்",
+    registerButton: "பதிவு சுயவிவரம்",
     statusTitle: "நிலை",
-    trainingCopy: "??????????? ??????????????? ????? ???? ??????? ????? ????????.",
+    trainingCopy: "பாதுகாப்பான உள்நுழைவுக்குப் பிறகு இந்தப் பயிற்சிப் பகுதி தெரியும்.",
     bioAge: "வயது",
     bioGender: "பாலினம்",
     fitnessLevel: "நிலை",
@@ -975,121 +1152,144 @@ const translations = {
     loginCount: "உள்நுழைவுகள்",
     currentGesture: "தற்போதைய சைகை",
     cameraFps: "கேமரா FPS",
-    warmupTitle: "தயாரிப்பு",
-    warmupCopy: "கைகளை தெளிவாகக் காட்டி சைகை கருத்தை பின்பற்றுங்கள்.",
+    warmupTitle: "வார்ம்-அப்",
+    warmupCopy: "உங்கள் கைகளைத் தெரியும்படி வைத்து, சைகை கருத்தைப் பின்பற்றவும்.",
     gestureTitle: "சைகை பயிற்சி",
-    gestureCopy: "திறந்த கை, முட்டி, தம்ப்ஸ் அப், பீஸ் மற்றும் சுட்டுதல் முயற்சிக்கவும்.",
+    gestureCopy: "திறந்த கை, முஷ்டி, கட்டைவிரல், அமைதி மற்றும் சுட்டிக்காட்டி முயற்சிக்கவும்.",
     sessionTitle: "அமர்வு",
-    sessionCopy: "பயிற்சி செயல்முறையை இங்கே மேலும் விரிவாக்கலாம்.",
-    completedSets: "???????",
+    sessionCopy: "பயிற்சி தர்க்கத்தை அடுத்து இங்கு விரிவாக்கலாம்.",
+    completedSets: "அமைக்கிறது",
     levelProgress: "அடுத்த நிலை",
-    exerciseAiTitle: "??????????? AI",
-    exerciseAiCopy: "??????? ????????? ???????? ??????????? ????????.",
-    exerciseLabel: "???????????",
-    exerciseSource: "?????",
-    exerciseReps: "????",
-    exerciseSamples: "?????????",
-    workoutTarget: "??????",
-    workoutState: "????",
-    targetMode: "?????? ????",
-    customTargetLabel: "????????? ???? ??????",
-    levelTargetPlaceholder: "???? ??????",
-    defaultExerciseGuidance: "??? ????????????? ?????? ??????, ???? ???? ??????, ?????? ??????????.",
-    invalidTargetMessage: "?????? 1 ????? 100 ??? ???? ?????? ?????? ????????.",
-    moveStartGuidance: "???? ???? ?????? ??????????? ?????? ???????? ?????????.",
-    wrongExerciseGuidance: "???? ????? ????????????? ??????????????? ?????????????. ????????????? ??????????????? ?????? ???????? ???????????.",
-    noRepCountedMessage: "??????? ???? ???????? ??????????????.",
-    restGuidance: "???? ?????????. ?????? ????? ?????????? ?????? ?????? ????????????? ?????? ?????????.",
-    curlUpGuidance: "??????? ???????? ??????? ?????? ??? ???? ???????? ?????? ?????????.",
-    curlDownGuidance: "?????? curl ???? ????????? ?????????.",
-    jumpUpGuidance: "????? ???? ??????? ???? ???????????.",
-    jumpDownGuidance: "?????? ???????????? ???? ??????? ?????? ???????? ?????????.",
-    armRaiseUpGuidance: "??? ????????? ?????? ???????? ???? ???????????.",
-    armRaiseDownGuidance: "?????? ???????? ???? ??? ????????? ???????? ???? ?????????.",
-    squatUpGuidance: "????????? ?????? ???????????????? squat ?????????.",
-    squatDownGuidance: "?????? squat ???? ????? ?????????.",
-    sideRaiseUpGuidance: "??? ????????? ??????? ???? ????? ??? ???????????.",
-    sideRaiseDownGuidance: "?????? side raise ???? ??? ????????? ?????????.",
-    genericExerciseGuidance: "???? ???? ?????? ??????????? ?????? ????????????.",
-    trainingTitle: "???????",
-    startSet: "???? ???????",
-    savePose: "?????? ????",
-    trainModel: "???????? ??????? ????",
-    languageSelect: "????",
-    cameraAlt: "?????????? ??????????? ??????????? ????? ?????",
-    workoutProgressLabel: "??????? ???????????",
-    exerciseSelectLabel: "???????????",
-    exerciseExampleAlt: "??????????? ???????",
-    unknown: "????????",
-    noneValue: "?????",
-    idle: "?????",
-    running: "?????????",
-    completed: "?????????",
-    up: "????",
-    down: "????",
-    rules: "???????",
-    model: "??????",
-    level: "????",
-    custom: "?????????",
-    openHand: "?????? ??",
-    fist: "????????",
-    thumbsUp: "?? ????? ????",
-    peace: "????? ????",
-    pointing: "?????????",
-    handCurl: "?? curl",
-    jumpExercise: "????????",
-    armRaises: "?? ?????????",
-    squatExercise: "squat",
-    sideArmRaises: "???? ?? ?????????",
-    handCurlRule: "??????? ??????? ???????? ???????. ??? ???? ???????? ?????? ??????, ?????? ???????? ???? ????????? ???????? ?????????.",
-    jumpRule: "??????????????? ??????? ???????? ?????????. ?????? ?????????????? ??????? ???? ???????? ??? ???? ???????????.",
-    armRaisesRule: "????? ???? ?????? ???????. ??? ????????? ???????? ???? ???????? ???????? ?????????.",
-    squatRule: "????? ?????????. ????????? ?????? squat ??????, ?????? ???????? ???? ???????? ????? ?????????.",
-    sideArmRaisesRule: "????? ???? ?????? ???????. ??? ????????? ??????? ???? ????? ??? ???????? ???????? ?????????.",
-    backendDown: "Backend http://127.0.0.1:8000 ??? ???????????",
-    selectExerciseMessage: "??? ????????????? ?????? ?????? ?????? ??????????.",
-    noFaceVisibleMessage: "????? ???????????. ??????? ?????? ???????? ??????????????.",
-    noRegisteredFaceMessage: "????? ??????????? ????? ??????? ???????? ?????????????.",
-    signInBeforeWorkoutMessage: "????????? ?????? ???? ????????????.",
-    signInBeforeProgressMessage: "????????????? ??????? ???? ????????????.",
-    chooseExerciseMessage: "?? curl, ????????, ?? ?????????, squat ?????? ???? ?? ????????? ?????? ?????????.",
-    progressSavedMessage: "??????????? ???????????????.",
-    signedOutMessage: "???????????.",
-    welcomeBackPrefix: "???????? ????????????",
-    registeredSuffix: "????? ?????????????. ???????? ???????? ????????? ??????? ?????? ?????????.",
-    recognizedPrefix: "???????? ???????????",
-    notPrefix: "?????",
-    trainedPrefix: "??????? ?????????????",
-    trainedSuffix: "??????????? ????????????.",
-    setStartedPrefix: "???? ??????????",
-    waitingForPrefix: "???????????????",
-    repsSuffix: "???????.",
-    setCompletePrefix: "???? ?????????.",
-    scoreAndLevelUpSuffix: "????????? ??????? ???? ??????.",
-    levelUpPrefix: "நிலை உயர்வு! நிலை",
+    exerciseAiTitle: "உடற்பயிற்சி AI",
+    exerciseAiCopy: "உள்ளூர் கற்றலுடன் தற்போதைய உடற்பயிற்சி அங்கீகாரம்.",
+    trainingPlansTitle: "பயிற்சி திட்டங்கள்",
+    trainingPlansCopy: "மூன்று ஆயத்த திட்டங்கள் உங்கள் உடற்தகுதி நிலைக்குத் தேர்ந்தெடுக்கப்பட்டு வயதுக்கு ஏற்ப சரிசெய்யப்படுகின்றன.",
+    ageGroupLabel: "வயது பிரிவு",
+    planStart: "திட்டத்தைத் தொடங்கவும்",
+    nextPlanStep: "அடுத்த உடற்பயிற்சி",
+    planStepLabel: "படி",
+    planCompleted: "திட்டம் முடிந்தது.",
+    youngAgeGroup: "18 வயதிற்குட்பட்டவர்கள்",
+    adultAgeGroup: "18-49",
+    matureAgeGroup: "50+",
+    exerciseLabel: "உடற்பயிற்சி",
+    exerciseSource: "ஆதாரம்",
+    exerciseReps: "பிரதிநிதிகள்",
+    exerciseSamples: "மாதிரிகள்",
+    workoutTarget: "இலக்கு",
+    workoutState: "அமைக்கவும்",
+    targetMode: "இலக்கு முறை",
+    customTargetLabel: "தனிப்பயன் மீண்டும் மீண்டும் இலக்கு",
+    levelTargetPlaceholder: "நிலை இலக்கு",
+    defaultExerciseGuidance: "ஒரு உடற்பயிற்சியைத் தேர்ந்தெடுங்கள், உங்கள் முழு உடலையும் தெரியும்படி வைத்துக் கொள்ளுங்கள், பின்னர் ஒரு தொகுப்பைத் தொடங்கவும்.",
+    invalidTargetMessage: "இலக்கு 1 முதல் 100 வரையிலான முழு எண்ணாக இருக்க வேண்டும்.",
+    moveStartGuidance: "உங்கள் முழு உடலையும் காட்டி, உடற்பயிற்சியின் தொடக்க நிலைக்குச் செல்லவும்.",
+    wrongExerciseGuidance: "அந்த இயக்கம் தேர்ந்தெடுக்கப்பட்ட உடற்பயிற்சியுடன் பொருந்தவில்லை. தேர்ந்தெடுக்கப்பட்ட உடற்பயிற்சி தொடக்க நிலைக்குத் திரும்புக.",
+    noRepCountedMessage: "மீண்டும் மீண்டும் எண்ணப்படவில்லை.",
+    restGuidance: "செட் முடிந்தது. சிறிது நேரம் ஓய்வெடுங்கள் அல்லது அடுத்த பயிற்சியைத் தேர்ந்தெடுக்கவும்.",
+    curlUpGuidance: "முழங்கையை உங்கள் உடலின் அருகில் வைத்து, ஒரு கையை தோள்பட்டை நோக்கி வளைக்கவும்.",
+    curlDownGuidance: "அடுத்த சுருட்டைக்கு முன் முழங்கையை நீட்டவும்.",
+    jumpUpGuidance: "பேஸ்லைனில் இருந்து தெளிவாக மேல்நோக்கிச் செல்லவும், அதனால் கேமரா அதை எண்ணும்.",
+    jumpDownGuidance: "தரையிறங்கி, அடுத்த ஜம்பிங் ஜாக் முன் அசையாமல் நிற்கவும்.",
+    armRaiseUpGuidance: "தோள்பட்டை உயரத்திற்கு மேல் இரு கைகளையும் ஒன்றாக உயர்த்தவும்.",
+    armRaiseDownGuidance: "அடுத்த பிரதிநிதிக்கு முன் இரு கைகளையும் தோள்பட்டை உயரத்திற்கு கீழே இறக்கவும்.",
+    squatUpGuidance: "கட்டுப்படுத்தப்பட்ட குந்துக்குள் உங்கள் முழங்கால்களை வளைக்கவும்.",
+    squatDownGuidance: "அடுத்த குந்துக்கு முன் மீண்டும் உயரமாக நிற்கவும்.",
+    sideRaiseUpGuidance: "தோள்பட்டை உயரத்திற்கு இரு கைகளையும் பக்கவாட்டில் உயர்த்தவும்.",
+    sideRaiseDownGuidance: "அடுத்த பக்கத்தை உயர்த்துவதற்கு முன் இரு கைகளையும் கீழே இறக்கவும்.",
+    genericExerciseGuidance: "உங்கள் முழு உடலையும் பார்க்க வைத்து உடற்பயிற்சி விதியை பின்பற்றவும்.",
+    trainingTitle: "பயிற்சி",
+    startSet: "தொடங்கவும்",
+    savePose: "போஸை சேமிக்கவும்",
+    trainModel: "ரயில் மாதிரி",
+    languageSelect: "மொழி",
+    cameraAlt: "ஸ்போர்ட்ஸ் டிராக்கிங் மேலடுக்கு கொண்ட நேரடி கேமரா",
+    workoutProgressLabel: "உடற்பயிற்சி முன்னேற்றம்",
+    exerciseSelectLabel: "உடற்பயிற்சி",
+    exerciseExampleAlt: "உடற்பயிற்சி உதாரணம்",
+    unknown: "தெரியவில்லை",
+    noneValue: "எதுவும் இல்லை",
+    idle: "சும்மா",
+    running: "ஓடுகிறது",
+    completed: "நிறைவு",
+    up: "வரை",
+    down: "கீழே",
+    rules: "விதிகள்",
+    model: "மாதிரி",
+    level: "நிலை",
+    custom: "வழக்கம்",
+    openHand: "திறந்த கை",
+    fist: "முஷ்டி",
+    thumbsUp: "கட்டைவிரல் மேலே",
+    peace: "அமைதி",
+    pointing: "சுட்டி",
+    handCurl: "கை கர்லிங்",
+    jumpExercise: "தாவி",
+    armRaises: "கை உயர்த்துகிறது",
+    squatExercise: "குந்து",
+    sideArmRaises: "பக்க கையை உயர்த்துகிறது",
+    handCurlRule: "நீட்டிக்கப்பட்ட முழங்கையுடன் தொடங்குங்கள். தோள்பட்டை நோக்கி ஒரு கையை சுருட்டி, அடுத்த பிரதிநிதிக்கு முன் மீண்டும் முழங்கையை நீட்டவும்.",
+    jumpRule: "தாவல்களுக்கு இடையில் அசையாமல் நிற்கவும். இரண்டு கணுக்கால்களும் அடித்தளத்திலிருந்து மேல்நோக்கி தெளிவாக நகரும்போது ஒரு பிரதிநிதி கணக்கிடப்படுகிறது.",
+    armRaisesRule: "இரண்டு கைகளையும் கீழே வைத்து தொடங்குங்கள். தோள்பட்டை உயரத்திற்கு மேல் இரு கைகளையும் உயர்த்தி, மீண்டும் கீழே இறக்கவும்.",
+    squatRule: "நிமிர்ந்து நில்லுங்கள். உங்கள் முழங்கால்களை ஒரு குந்துவாக வளைத்து, அடுத்த பிரதிநிதிக்கு முன் மீண்டும் உயரமாக நிற்கவும்.",
+    sideArmRaisesRule: "கைகளை கீழே கொண்டு தொடங்குங்கள். இரு கைகளையும் தோள்பட்டை உயரத்திற்கு உயர்த்தி, மீண்டும் கீழே இறக்கவும்.",
+    backendDown: "பின்தளம் http://127.0.0.1:8000 இல் இயங்கவில்லை",
+    selectExerciseMessage: "ஒரு உடற்பயிற்சியைத் தேர்ந்தெடுத்து ஒரு தொகுப்பைத் தொடங்கவும்.",
+    noFaceVisibleMessage: "முகம் தெரியவில்லை. கேமராவைப் பார்த்து மீண்டும் முயலவும்.",
+    noRegisteredFaceMessage: "பதிவு செய்யப்பட்ட முகம் இன்னும் அடையாளம் காணப்படவில்லை.",
+    signInBeforeWorkoutMessage: "உடற்பயிற்சியைத் தொடங்கும் முன் உள்நுழையவும்.",
+    signInBeforeProgressMessage: "முன்னேற்றத்தைச் சேமிப்பதற்கு முன் உள்நுழையவும்.",
+    chooseExerciseMessage: "கை கர்லிங், ஜம்ப், ஆர்ம் ரைஸ், குந்து அல்லது சைட் ஆர்ம் ரைஸ் ஆகியவற்றைத் தேர்ந்தெடுக்கவும்.",
+    progressSavedMessage: "முன்னேற்றம் சேமிக்கப்பட்டது.",
+    signedOutMessage: "வெளியேறினார்.",
+    welcomeBackPrefix: "மீண்டும் வரவேற்கிறோம்",
+    registeredSuffix: "பதிவு செய்யப்பட்டுள்ளது. உள்நுழைய அங்கீகரிக்கப்பட்ட முகத்தைத் தேர்ந்தெடுக்கவும்.",
+    recognizedPrefix: "அங்கீகரிக்கப்பட்டது",
+    notPrefix: "இல்லை",
+    trainedPrefix: "மீது பயிற்சி பெற்றார்",
+    trainedSuffix: "உடற்பயிற்சி மாதிரிகள்.",
+    setStartedPrefix: "தொடங்கப்பட்டது",
+    waitingForPrefix: "காத்திருக்கிறது",
+    repsSuffix: "பிரதிநிதிகள்.",
+    setCompletePrefix: "செட் முடிந்தது.",
+    scoreAndLevelUpSuffix: "மதிப்பெண் மற்றும் நிலை.",
+    levelUpPrefix: "நிலை! நிலை",
     levelUnlockedSuffix: "திறக்கப்பட்டது.",
     scoreSuffix: "மதிப்பெண்.",
-    setsTowardLevelSuffix: "அடுத்த நிலைக்கு செட்கள்.",
-    completeMoreSetsPrefix: "முடிக்கவும்",
-    moreSetsLevelSuffix: "மேலும் செட்கள் அடுத்த நிலைக்கு.",
+    setsTowardLevelSuffix: "அடுத்த கட்டத்தை நோக்கி அமைகிறது.",
+    completeMoreSetsPrefix: "நிறைவு",
+    moreSetsLevelSuffix: "அடுத்த நிலையை அடைய அதிக தொகுப்பு(கள்).",
     newChallengePrefix: "புதிய சவால்:",
-    setWithRepsConnector: "செட்கள், ஒவ்வொன்றும்",
-    repsEachSuffix: "முறை.",
+    setWithRepsConnector: "உடன் தொகுப்பு(கள்).",
+    repsEachSuffix: "ஒவ்வொரு பிரதிநிதிகள்.",
     logout: "வெளியேறு",
-    waiting: "கேமராவுக்காக காத்திருக்கிறது...",
-    enterName: "பெயரை உள்ளிடுங்கள்.",
-    enterAge: "சரியான வயதை உள்ளிடுங்கள்.",
+    waiting: "கேமராவுக்காகக் காத்திருக்கிறது...",
+    enterName: "தயவுசெய்து உங்கள் பெயரை உள்ளிடவும்.",
+    enterAge: "சரியான வயதை உள்ளிடவும்.",
     noProfiles: "எதுவும் இல்லை",
     yes: "ஆம்",
     no: "இல்லை",
     faces: "முகங்கள்",
     gestures: "சைகைகள்",
     profiles: "சுயவிவரங்கள்",
-    faceIdReady: "??? ????????? ?????? ??????",
-    noRecognizedFace: "இன்னும் முகம் அடையாளம் காணப்படவில்லை",
-    detectedUser: "???????? ???????????",
-    loginReadyHint: "????? ?????? ??????. ??????? ??????? ?????? ????????.",
-    loginWaitingHint: "???????????? ???????????????. ??? ????? ????? ????????? ????? ???????? ??????????????.",
+    faceIdReady: "முக உள்நுழைவு தயார்",
+    noRecognizedFace: "இன்னும் அடையாளம் தெரியாத முகம்",
+    detectedUser: "கண்டறியப்பட்டது",
+    loginReadyHint: "கேமரா தயாராக உள்ளது. உங்கள் முகத்தை மையமாக வைத்து தொடரவும்.",
+    loginWaitingHint: "கேமராவுக்காக காத்திருக்கிறேன். இதற்கு அதிக நேரம் எடுத்தால் கேமரா அனுமதியைச் சரிபார்க்கவும்.",
+    registrationSamples: "முக மாதிரிகள்",
+    captureFaceSample: "மாதிரியைப் பிடிக்கவும்",
+    clearFaceSamples: "மாதிரிகளை மீட்டமைக்கவும்",
+    faceSampleInstruction: "ஒரே முகத்தின் மூன்று கோணங்களைப் பிடிக்கவும்: முன், சற்று இடது, சிறிது வலது.",
+    nextFacePose: "அடுத்த கோணம்",
+    facePoseFront: "முன்",
+    facePoseLeft: "சிறிது இடது",
+    facePoseRight: "சிறிது வலது",
+    samplesRequiredMessage: "பதிவு செய்வதற்கு முன் 3 முக மாதிரிகளைப் பிடிக்கவும்.",
+    samplesReadyMessage: "அனைத்து முக மாதிரிகளும் தயாராக உள்ளன. நீங்கள் இப்போது சுயவிவரத்தை பதிவு செய்யலாம்.",
+    faceSamplesClearedMessage: "முக மாதிரிகள் அழிக்கப்பட்டன.",
+    moveCloserFaceMessage: "இந்த முக மாதிரியைச் சேமிப்பதற்கு முன் கேமராவிற்கு அருகில் செல்லவும்.",
+    oneFaceRegistrationMessage: "பதிவின் போது ஒரு முகம் மட்டுமே தெரியும்.",
   },
   ki: {
     appTitle: "SportsAI Coach",
@@ -1111,6 +1311,11 @@ const translations = {
     genderMale: "Mũndũrũme",
     genderDiverse: "Mĩthemba mĩingĩ",
     genderPrivate: "Ndirenda kwaria",
+    initialFitnessLabel: "Fitness ya riu",
+    fitnessBeginner: "Mwendi wa mbere",
+    fitnessActive: "Murathii",
+    fitnessFit: "Fit",
+    fitnessAthlete: "Athlete",
     registerButton: "Andĩkithia profile",
     statusTitle: "Hali",
     trainingCopy: "Handu ha guthomithia honagwo thuutha wa kuingira kuri na uiguano.",
@@ -1131,6 +1336,16 @@ const translations = {
     levelProgress: "Level ingi",
     exerciseAiTitle: "AI ya mathomo",
     exerciseAiCopy: "Kumenya mathomo kwa riu na guthoma kwa kompiuta.",
+    trainingPlansTitle: "Mipango ya guthomithia",
+    trainingPlansCopy: "Mipango itatu ithuurwo kuringana na fitness na miaka.",
+    ageGroupLabel: "Ikundi ria miaka",
+    planStart: "Ambia mpango",
+    nextPlanStep: "Ithomo ringi",
+    planStepLabel: "Hatua",
+    planCompleted: "Mpango niwathira.",
+    youngAgeGroup: "Thi ya 18",
+    adultAgeGroup: "18-49",
+    matureAgeGroup: "50+",
     exerciseLabel: "Ithomo",
     exerciseSource: "Kuma",
     exerciseReps: "Mahinda",
@@ -1236,6 +1451,19 @@ const translations = {
     detectedUser: "Imenyekete",
     loginReadyHint: "Camera ni tayari. Ika uso gatagati na uendelee.",
     loginWaitingHint: "Kwetera camera. Rora ruhusa rwa camera kana ikiria mahinda maingi.",
+    registrationSamples: "Mihiano ya uso",
+    captureFaceSample: "Hifadhi muhiano",
+    clearFaceSamples: "Ambia ringi",
+    faceSampleInstruction: "Hifadhi uso umwe mara ithatu: mbere, mwena wa umotho, mwena wa urio.",
+    nextFacePose: "Mwena ucio ukurikira",
+    facePoseFront: "mbere",
+    facePoseLeft: "umotho hanini",
+    facePoseRight: "urio hanini",
+    samplesRequiredMessage: "Hifadhi mihiano 3 ya uso mbere ya kwandikithia.",
+    samplesReadyMessage: "Mihiano yothe ya uso ni tayari. No wandikithie profile.",
+    faceSamplesClearedMessage: "Mihiano ya uso ithirwo.",
+    moveCloserFaceMessage: "Thi hakuhi na camera mbere ya kuhifadhi muhiano uyu.",
+    oneFaceRegistrationMessage: "Uso umwe wiki niwo ugomba kuonekana hingo ya kwandikithia.",
   },
 } satisfies Record<Language, Record<string, string>>;
 
@@ -1251,6 +1479,7 @@ const languageLabels: Record<Language, string> = {
 };
 
 const genderOptions = ["female", "male", "diverse", "prefer-not-to-say"] as const;
+const fitnessLevelOptions = ["beginner", "active", "fit", "athlete"] as const;
 const exerciseOptions = ["hand_curl", "jump", "arm_raises", "squat", "side_arm_raises"] as const;
 const exerciseExamples: Record<(typeof exerciseOptions)[number], string> = {
   hand_curl: "/exercises/hand_curl.png",
@@ -1274,18 +1503,59 @@ const exerciseRuleKeys: Record<(typeof exerciseOptions)[number], string> = {
   side_arm_raises: "sideArmRaisesRule",
 };
 
+type TrainingPlan = {
+  id: string;
+  fitnessLevel: FitnessLevel;
+  title: string;
+  steps: Array<{
+    exercise: (typeof exerciseOptions)[number];
+    reps: number;
+  }>;
+};
+
+const trainingPlans: Record<FitnessLevel, TrainingPlan[]> = {
+  beginner: [
+    { id: "beginner-foundation", fitnessLevel: "beginner", title: "Foundation", steps: [{ exercise: "hand_curl", reps: 5 }, { exercise: "squat", reps: 5 }, { exercise: "arm_raises", reps: 5 }] },
+    { id: "beginner-mobility", fitnessLevel: "beginner", title: "Mobility", steps: [{ exercise: "arm_raises", reps: 5 }, { exercise: "side_arm_raises", reps: 5 }, { exercise: "hand_curl", reps: 5 }] },
+    { id: "beginner-energy", fitnessLevel: "beginner", title: "Energy", steps: [{ exercise: "jump", reps: 5 }, { exercise: "hand_curl", reps: 5 }, { exercise: "squat", reps: 5 }] },
+  ],
+  active: [
+    { id: "active-balance", fitnessLevel: "active", title: "Balance", steps: [{ exercise: "hand_curl", reps: 8 }, { exercise: "jump", reps: 8 }, { exercise: "squat", reps: 8 }] },
+    { id: "active-upper", fitnessLevel: "active", title: "Upper Body", steps: [{ exercise: "arm_raises", reps: 8 }, { exercise: "side_arm_raises", reps: 8 }, { exercise: "hand_curl", reps: 8 }] },
+    { id: "active-cardio", fitnessLevel: "active", title: "Cardio Mix", steps: [{ exercise: "jump", reps: 10 }, { exercise: "squat", reps: 8 }, { exercise: "arm_raises", reps: 8 }] },
+  ],
+  fit: [
+    { id: "fit-strength", fitnessLevel: "fit", title: "Strength", steps: [{ exercise: "squat", reps: 12 }, { exercise: "hand_curl", reps: 12 }, { exercise: "side_arm_raises", reps: 12 }] },
+    { id: "fit-endurance", fitnessLevel: "fit", title: "Endurance", steps: [{ exercise: "jump", reps: 14 }, { exercise: "arm_raises", reps: 12 }, { exercise: "squat", reps: 12 }] },
+    { id: "fit-control", fitnessLevel: "fit", title: "Control", steps: [{ exercise: "side_arm_raises", reps: 12 }, { exercise: "hand_curl", reps: 12 }, { exercise: "arm_raises", reps: 12 }] },
+  ],
+  athlete: [
+    { id: "athlete-power", fitnessLevel: "athlete", title: "Power", steps: [{ exercise: "jump", reps: 18 }, { exercise: "squat", reps: 16 }, { exercise: "hand_curl", reps: 16 }] },
+    { id: "athlete-volume", fitnessLevel: "athlete", title: "Volume", steps: [{ exercise: "arm_raises", reps: 16 }, { exercise: "side_arm_raises", reps: 16 }, { exercise: "squat", reps: 16 }] },
+    { id: "athlete-full", fitnessLevel: "athlete", title: "Full Body", steps: [{ exercise: "jump", reps: 18 }, { exercise: "hand_curl", reps: 16 }, { exercise: "side_arm_raises", reps: 16 }] },
+  ],
+};
+
 export default function Home() {
   const [language, setLanguage] = useState<Language>("en");
   const [status, setStatus] = useState<StatusResponse | null>(null);
   const [tab, setTab] = useState<"sign-in" | "register">("sign-in");
   const [message, setMessage] = useState("");
   const [profileOpen, setProfileOpen] = useState(false);
+  const [rulesOpen, setRulesOpen] = useState(false);
   const [name, setName] = useState("");
   const [age, setAge] = useState("");
   const [gender, setGender] = useState<(typeof genderOptions)[number]>("female");
+  const [fitnessLevel, setFitnessLevel] = useState<FitnessLevel>("beginner");
   const [selectedCandidate, setSelectedCandidate] = useState("");
   const [exerciseLabel, setExerciseLabel] = useState<(typeof exerciseOptions)[number]>("hand_curl");
   const [customTarget, setCustomTarget] = useState("");
+  const [activePlanId, setActivePlanId] = useState("");
+  const [expandedPlanId, setExpandedPlanId] = useState("");
+  const [activePlanStep, setActivePlanStep] = useState(0);
+  const [backgroundColor, setBackgroundColor] = useState("#edf3fa");
+  const [buttonColor, setButtonColor] = useState("#1769e0");
+  const [textColor, setTextColor] = useState("#18202f");
 
   const t = useMemo(() => translations[language], [language]);
   const text = (key: string, fallback: string) => (t as Record<string, string>)[key] ?? fallback;
@@ -1330,6 +1600,25 @@ export default function Home() {
     };
     return keyByValue[normalized] ? text(keyByValue[normalized], value) : value;
   };
+  const translateFitnessLevel = (value: string | null | undefined) => {
+    const keys: Record<string, string> = {
+      beginner: "fitnessBeginner",
+      active: "fitnessActive",
+      fit: "fitnessFit",
+      athlete: "fitnessAthlete",
+    };
+    const normalized = value || "beginner";
+    return text(keys[normalized] ?? "fitnessBeginner", normalized);
+  };
+  const translateFacePose = (value: string | null | undefined) => {
+    const keys: Record<string, string> = {
+      front: "facePoseFront",
+      left: "facePoseLeft",
+      right: "facePoseRight",
+    };
+    const normalized = value || "front";
+    return text(keys[normalized] ?? "facePoseFront", normalized);
+  };
   const translateMessage = (value: string) => {
     if (!value) return "";
 
@@ -1341,6 +1630,18 @@ export default function Home() {
     }
     if (value === "No face is visible. Look into the camera and try again.") {
       return text("noFaceVisibleMessage", value);
+    }
+    if (value === "Only one face should be visible during registration.") {
+      return text("oneFaceRegistrationMessage", value);
+    }
+    if (value === "Move closer to the camera before saving this face sample.") {
+      return text("moveCloserFaceMessage", value);
+    }
+    if (value === "All face samples are ready. You can register the profile now.") {
+      return text("samplesReadyMessage", value);
+    }
+    if (value === "Face samples cleared.") {
+      return text("faceSamplesClearedMessage", value);
     }
     if (value === "No registered face recognized yet.") {
       return text("noRegisteredFaceMessage", value);
@@ -1395,6 +1696,16 @@ export default function Home() {
     match = value.match(/^(.+) has been registered\. Select the recognized face to sign in\.$/);
     if (match) {
       return `${match[1]} ${text("registeredSuffix", "has been registered. Select the recognized face to sign in.")}`;
+    }
+
+    match = value.match(/^(.+) has been registered with (\d+) face samples\. Select the recognized face to sign in\.$/);
+    if (match) {
+      return `${match[1]} ${text("registeredSuffix", "has been registered. Select the recognized face to sign in.")}`;
+    }
+
+    match = value.match(/^Face sample (\d+)\/3 saved from (.+)\. Next: turn (.+)\.$/);
+    if (match) {
+      return `${text("registrationSamples", "Face samples")} ${match[1]}/3: ${translateFacePose(match[2])}. ${text("nextFacePose", "Next angle")}: ${translateFacePose(match[3])}.`;
     }
 
     match = value.match(/^Recognized (.+), not (.+)\.$/);
@@ -1468,25 +1779,72 @@ export default function Home() {
     workout && workout.targetReps > 0
       ? Math.min(100, Math.round((workout.currentReps / workout.targetReps) * 100))
       : 0;
+  const profileFitnessLevel = activeProfile?.fitnessLevel ?? "beginner";
+  const profilePlans = trainingPlans[profileFitnessLevel] ?? trainingPlans.beginner;
+  const activePlan = profilePlans.find((plan) => plan.id === activePlanId) ?? null;
+  const ageGroup = (() => {
+    const value = activeProfile?.age ?? 25;
+    if (value < 18) return "youngAgeGroup";
+    if (value >= 50) return "matureAgeGroup";
+    return "adultAgeGroup";
+  })();
+  const ageRepAdjustment = ageGroup === "youngAgeGroup" ? -1 : ageGroup === "matureAgeGroup" ? -2 : 0;
+  const adjustedPlanReps = (reps: number) => Math.max(3, reps + ageRepAdjustment);
+  const startTrainingPlan = async (plan: TrainingPlan, stepIndex = 0) => {
+    const step = plan.steps[stepIndex];
+    if (!step) {
+      setMessage(text("planCompleted", "Plan completed."));
+      return;
+    }
+    setActivePlanId(plan.id);
+    setExpandedPlanId(plan.id);
+    setActivePlanStep(stepIndex);
+    setExerciseLabel(step.exercise);
+    setCustomTarget("");
+    await startWorkout(step.exercise, adjustedPlanReps(step.reps));
+  };
+  const startNextPlanStep = async () => {
+    if (!activePlan) return;
+    await startTrainingPlan(activePlan, activePlanStep + 1);
+  };
   const gestureText = status?.gestures.length
     ? status.gestures.map((entry) => translateStatusValue(entry.label)).join(", ")
     : text("unknown", "unknown");
   const profileText = status?.profiles.length
     ? status.profiles.map((entry) => entry.name).join(", ")
     : t.noProfiles;
-  const registrationSampleText = `${status?.registrationSamplesReady ?? 0}/${status?.minRegistrationSamples ?? 3}`;
+  const registrationSamplesReady = Math.min(
+    status?.registrationSamplesReady ?? 0,
+    status?.minRegistrationSamples ?? 3,
+  );
+  const registrationSampleText = `${registrationSamplesReady}/${status?.minRegistrationSamples ?? 3}`;
 
   useEffect(() => {
     const stored = localStorage.getItem("siavi-language") as Language | null;
     if (stored && stored in translations) {
       setLanguage(stored);
     }
+    setBackgroundColor(localStorage.getItem("siavi-bg-color") || "#edf3fa");
+    setButtonColor(localStorage.getItem("siavi-button-color") || "#1769e0");
+    setTextColor(localStorage.getItem("siavi-text-color") || "#18202f");
   }, []);
 
   useEffect(() => {
     document.documentElement.lang = language;
     localStorage.setItem("siavi-language", language);
   }, [language]);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    root.style.setProperty("--ui-bg", backgroundColor);
+    root.style.setProperty("--ui-primary", buttonColor);
+    root.style.setProperty("--ui-primary-soft", `${buttonColor}18`);
+    root.style.setProperty("--ui-text", textColor);
+    root.style.setProperty("--ui-muted", `${textColor}b3`);
+    localStorage.setItem("siavi-bg-color", backgroundColor);
+    localStorage.setItem("siavi-button-color", buttonColor);
+    localStorage.setItem("siavi-text-color", textColor);
+  }, [backgroundColor, buttonColor, textColor]);
 
   useEffect(() => {
     let alive = true;
@@ -1526,6 +1884,10 @@ export default function Home() {
       setMessage(t.enterAge);
       return;
     }
+    if (registrationSamplesReady < (status?.minRegistrationSamples ?? 3)) {
+      setMessage(text("samplesRequiredMessage", "Capture 3 face samples before registering."));
+      return;
+    }
 
     const response = await fetch("/api/register", {
       method: "POST",
@@ -1534,6 +1896,7 @@ export default function Home() {
         name: name.trim(),
         age: parsedAge,
         gender,
+        fitnessLevel,
       }),
     });
     const result = (await response.json()) as { message: string };
@@ -1578,8 +1941,11 @@ export default function Home() {
     setMessage(result.message);
   }
 
-  async function startWorkout() {
-    const parsedTarget = customTarget.trim() ? Number(customTarget) : undefined;
+  async function startWorkout(
+    exerciseOverride = exerciseLabel,
+    targetOverride?: number,
+  ) {
+    const parsedTarget = targetOverride ?? (customTarget.trim() ? Number(customTarget) : undefined);
     if (parsedTarget !== undefined && (!Number.isInteger(parsedTarget) || parsedTarget < 1 || parsedTarget > 100)) {
       setMessage(text("invalidTargetMessage", "Target must be a whole number from 1 to 100."));
       return;
@@ -1588,8 +1954,20 @@ export default function Home() {
     const response = await fetch("/api/workout/start", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ exercise: exerciseLabel, targetReps: parsedTarget }),
+      body: JSON.stringify({ exercise: exerciseOverride, targetReps: parsedTarget }),
     });
+    const result = (await response.json()) as { message: string };
+    setMessage(result.message);
+  }
+
+  async function captureRegistrationSample() {
+    const response = await fetch("/api/register/sample", { method: "POST" });
+    const result = (await response.json()) as { message: string };
+    setMessage(result.message);
+  }
+
+  async function clearRegistrationSamples() {
+    const response = await fetch("/api/register/samples/clear", { method: "POST" });
     const result = (await response.json()) as { message: string };
     setMessage(result.message);
   }
@@ -1621,41 +1999,131 @@ export default function Home() {
           {!isAuthenticated ? (
             <div className="statusPill warn">{t.signedOut}</div>
           ) : (
-            <div className="profileMenu">
-              <button
-                className="profileButton"
-                type="button"
-                aria-expanded={profileOpen}
-                onClick={() => setProfileOpen((open) => !open)}
-              >
-                <span>{activeProfile?.name ?? status?.authenticatedName ?? "-"}</span>
-                <small>
-                  {t.fitnessLevel} {activeProfile?.level ?? 1}
-                </small>
-              </button>
+            <div className="profileTools">
+              <div className="profileMenu">
+                <button
+                  className="profileButton"
+                  type="button"
+                  aria-expanded={profileOpen}
+                  onClick={() => setProfileOpen((open) => !open)}
+                >
+                  <span>{activeProfile?.name ?? status?.authenticatedName ?? "-"}</span>
+                  <small>
+                    {t.fitnessLevel} {activeProfile?.level ?? 1}
+                  </small>
+                </button>
 
-              {profileOpen ? (
-                <div className="profilePopover">
-                  <ProfileRow label={t.bioAge} value={activeProfile?.age ?? "-"} />
-                  <ProfileRow label={t.bioGender} value={activeProfile?.gender ?? "-"} />
-                  <ProfileRow label={t.score} value={activeProfile?.score ?? 0} />
-                  <ProfileRow label={t.loginCount} value={activeProfile?.loginCount ?? 0} />
-                  <ProfileRow
-                    label={text("completedSets", "Sets")}
-                    value={activeProfile?.completedSets ?? 0}
+                {profileOpen ? (
+                  <div className="profilePopover">
+                    <ProfileRow label={t.bioAge} value={activeProfile?.age ?? "-"} />
+                    <ProfileRow label={t.bioGender} value={activeProfile?.gender ?? "-"} />
+                    <ProfileRow
+                      label={text("initialFitnessLabel", "Current fitness")}
+                      value={translateFitnessLevel(activeProfile?.fitnessLevel)}
+                    />
+                    <ProfileRow label={t.score} value={activeProfile?.score ?? 0} />
+                    <ProfileRow label={t.loginCount} value={activeProfile?.loginCount ?? 0} />
+                    <ProfileRow
+                      label={text("completedSets", "Sets")}
+                      value={activeProfile?.completedSets ?? 0}
+                    />
+                  </div>
+                ) : null}
+              </div>
+              <div className="paletteControl" aria-label={text("colorPalette", "Color palette")}>
+                <label title="Background">
+                  <span>BG</span>
+                  <input
+                    aria-label="Background color"
+                    className="colorPicker"
+                    type="color"
+                    value={backgroundColor}
+                    onChange={(event) => setBackgroundColor(event.target.value)}
                   />
-                </div>
-              ) : null}
+                </label>
+                <label title="Buttons">
+                  <span>Button</span>
+                  <input
+                    aria-label="Button color"
+                    className="colorPicker"
+                    type="color"
+                    value={buttonColor}
+                    onChange={(event) => setButtonColor(event.target.value)}
+                  />
+                </label>
+                <label title="Text">
+                  <span>Text</span>
+                  <input
+                    aria-label="Text color"
+                    className="colorPicker"
+                    type="color"
+                    value={textColor}
+                    onChange={(event) => setTextColor(event.target.value)}
+                  />
+                </label>
+              </div>
+              <div className="rulesMenu">
+                <button
+                  className="rulesButton"
+                  type="button"
+                  aria-expanded={rulesOpen}
+                  onClick={() => setRulesOpen((open) => !open)}
+                >
+                  {text("rules", "rules")}
+                </button>
+                {rulesOpen ? (
+                  <div className="rulesPopover">
+                    {exerciseOptions.map((option) => (
+                      <div key={option}>
+                        <strong>{translateExerciseName(option)}</strong>
+                        <span>{text(exerciseRuleKeys[option], "")}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
             </div>
           )}
         </div>
       </header>
+
+      {isAuthenticated ? (
+        <section className="sessionBar">
+          <div className="sessionIdentity">
+            <span className="statusDot" aria-hidden="true" />
+            <div>
+              <strong>{activeProfile?.name ?? status?.authenticatedName ?? t.signedIn}</strong>
+              <span>
+                {text("initialFitnessLabel", "Current fitness")}: {translateFitnessLevel(profileFitnessLevel)}
+              </span>
+            </div>
+          </div>
+          <div className="sessionStats">
+            <Metric label={t.fitnessLevel} value={activeProfile?.level ?? 1} />
+            <Metric label={t.score} value={activeProfile?.score ?? 0} />
+            <Metric
+              label={text("completedSets", "Sets")}
+              value={activeProfile?.completedSets ?? 0}
+            />
+          </div>
+          <button className="secondary" type="button" onClick={logout}>
+            {t.logout}
+          </button>
+        </section>
+      ) : null}
 
       <section className={isAuthenticated ? "layout authenticatedLayout" : "layout"}>
         <div className="cameraColumn">
           <div className="cameraPanel">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/video.mjpg" alt={text("cameraAlt", "Live camera with sports tracking overlay")} />
+            {!isAuthenticated ? (
+              <div className={status?.recognitionReady ? "cameraBadge ready" : "cameraBadge"}>
+                {status?.recognitionReady
+                  ? text("loginReadyHint", "Camera is ready. Keep your face centered and continue.")
+                  : text("loginWaitingHint", "Waiting for the camera. Check camera permission if this takes too long.")}
+              </div>
+            ) : null}
           </div>
           {isAuthenticated && exampleImage ? (
             <div className="exercisePreview">
@@ -1666,7 +2134,40 @@ export default function Home() {
                   alt={`${translateExerciseName(previewExercise)} ${text("exerciseExampleAlt", "exercise example")}`}
                 />
               </div>
-              {activeExerciseRule ? <div className="exerciseRule">{activeExerciseRule}</div> : null}
+              <div className="exerciseLiveStatus">
+                <div className="metrics compactMetrics">
+                  <Metric
+                    label={text("exerciseLabel", "Exercise")}
+                    value={translateExerciseName(previewExercise)}
+                  />
+                  <Metric
+                    label={text("workoutTarget", "Target")}
+                    value={`${workout?.currentReps ?? 0}/${workout?.targetReps ?? 5}`}
+                  />
+                  <Metric label={t.fitnessLevel} value={activeProfile?.level ?? 1} />
+                  <Metric
+                    label={text("levelProgress", "Next level")}
+                    value={`${workout?.setsCompletedInLevel ?? 0}/${workout?.setsRequiredForLevel ?? 1}`}
+                  />
+                  <Metric
+                    label={text("completedSets", "Sets")}
+                    value={activeProfile?.completedSets ?? 0}
+                  />
+                </div>
+                <div className="workoutProgress" aria-label={text("workoutProgressLabel", "Workout progress")}>
+                  <div style={{ width: `${workoutProgress}%` }} />
+                </div>
+                <div className={workout?.completed ? "message success" : "message"}>
+                  {translateMessage(workout?.message ?? text("waiting", "Waiting for camera..."))}
+                </div>
+                <div className="exerciseGuidance">
+                  {translateMessage(
+                    workout?.guidance
+                      ?? text("defaultExerciseGuidance", "Choose an exercise, keep your full body visible, then start a set.")
+                  )}
+                </div>
+                {activeExerciseRule ? <div className="exerciseRule">{activeExerciseRule}</div> : null}
+              </div>
             </div>
           ) : null}
         </div>
@@ -1675,8 +2176,8 @@ export default function Home() {
           <aside className="sidePanel exerciseSidePanel">
             <div className="exercisePanel">
               <div>
-                <h3>{text("exerciseAiTitle", "Exercise AI")}</h3>
-                <p>{text("exerciseAiCopy", "Current exercise recognition with local learning.")}</p>
+                <h3>{text("trainingTitle", "Training")}</h3>
+                <p>{text("defaultExerciseGuidance", "Choose an exercise, keep your full body visible, then start a set.")}</p>
               </div>
               <div className="exerciseTrainer">
                 <select
@@ -1699,47 +2200,71 @@ export default function Home() {
                   value={customTarget}
                   onChange={(event) => setCustomTarget(event.target.value)}
                 />
-                <button type="button" onClick={startWorkout}>
+                <button type="button" onClick={() => startWorkout()}>
                   {text("startSet", "Start set")}
                 </button>
               </div>
-              <div className="metrics">
-                <Metric
-                  label={text("exerciseLabel", "Exercise")}
-                  value={translateExerciseName(previewExercise)}
-                />
-                <Metric
-                  label={text("workoutTarget", "Target")}
-                  value={`${workout?.currentReps ?? 0}/${workout?.targetReps ?? 5}`}
-                />
-                <Metric label={t.fitnessLevel} value={activeProfile?.level ?? 1} />
-                <Metric
-                  label={text("levelProgress", "Next level")}
-                  value={`${workout?.setsCompletedInLevel ?? 0}/${workout?.setsRequiredForLevel ?? 1}`}
-                />
-                <Metric
-                  label={text("completedSets", "Sets")}
-                  value={activeProfile?.completedSets ?? 0}
-                />
-              </div>
-              <div className="workoutProgress" aria-label={text("workoutProgressLabel", "Workout progress")}>
-                <div style={{ width: `${workoutProgress}%` }} />
-              </div>
-              <div className={workout?.completed ? "message success" : "message"}>
-                {translateMessage(workout?.message ?? text("waiting", "Waiting for camera..."))}
-              </div>
-              <div className="exerciseGuidance">
-                {translateMessage(
-                  workout?.guidance
-                    ?? text("defaultExerciseGuidance", "Choose an exercise, keep your full body visible, then start a set.")
-                )}
+              <div className="planSection">
+                <div>
+                  <h4>{text("trainingPlansTitle", "Training plans")}</h4>
+                  <p>
+                    {text("trainingPlansCopy", "Three ready-made plans are selected for your fitness level and adjusted by age group.")}
+                  </p>
+                  <small>
+                    {text("initialFitnessLabel", "Current fitness")}: {translateFitnessLevel(profileFitnessLevel)}
+                    {" - "}
+                    {text("ageGroupLabel", "Age group")}: {text(ageGroup, "18-49")}
+                  </small>
+                </div>
+                <div className="planGrid">
+                  {profilePlans.map((plan) => {
+                    const isExpanded = expandedPlanId === plan.id;
+                    return (
+                      <div className={plan.id === activePlanId ? "planCard active" : "planCard"} key={plan.id}>
+                        <button
+                          className="planToggle"
+                          type="button"
+                          aria-expanded={isExpanded}
+                          onClick={() => setExpandedPlanId(isExpanded ? "" : plan.id)}
+                        >
+                          <strong>{plan.title}</strong>
+                          <span>{isExpanded ? "-" : "+"}</span>
+                        </button>
+                        {isExpanded ? (
+                          <div className="planDetails">
+                            <span>
+                              {plan.steps
+                                .map((step) => `${translateExerciseName(step.exercise)} ${adjustedPlanReps(step.reps)}`)
+                                .join(" - ")}
+                            </span>
+                            <button type="button" onClick={() => startTrainingPlan(plan)}>
+                              {text("planStart", "Start plan")}
+                            </button>
+                          </div>
+                        ) : null}
+                      </div>
+                    );
+                  })}
+                </div>
+                {activePlan && workout?.completed ? (
+                  <button
+                    className="nextPlanButton"
+                    type="button"
+                    onClick={startNextPlanStep}
+                    disabled={activePlanStep >= activePlan.steps.length - 1}
+                  >
+                    {activePlanStep >= activePlan.steps.length - 1
+                      ? text("planCompleted", "Plan completed.")
+                      : `${text("nextPlanStep", "Next exercise")} (${text("planStepLabel", "Step")} ${activePlanStep + 2}/${activePlan.steps.length})`}
+                  </button>
+                ) : null}
               </div>
             </div>
           </aside>
         ) : null}
 
         {!isAuthenticated ? (
-          <aside className="sidePanel">
+          <aside className="sidePanel authPanel">
             <div className="tabs">
               <button
                 className={tab === "sign-in" ? "active" : ""}
@@ -1826,56 +2351,57 @@ export default function Home() {
                     <option value="prefer-not-to-say">{t.genderPrivate}</option>
                   </select>
                 </label>
-                <button type="button" onClick={registerFace}>
+                <label>
+                  {text("initialFitnessLabel", "Current fitness")}
+                  <select
+                    value={fitnessLevel}
+                    onChange={(event) => setFitnessLevel(event.target.value as FitnessLevel)}
+                  >
+                    {fitnessLevelOptions.map((option) => (
+                      <option key={option} value={option}>
+                        {translateFitnessLevel(option)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <div className="sampleCapture">
+                  <div>
+                    <strong>
+                      {text("registrationSamples", "Face samples")}: {registrationSampleText}
+                    </strong>
+                    <span>{text("faceSampleInstruction", "Capture three angles of the same face: front, slight left, slight right.")}</span>
+                    <small>
+                      {text("nextFacePose", "Next angle")}: {translateFacePose(status?.nextRegistrationPose)}
+                    </small>
+                  </div>
+                  <div className="sampleActions">
+                    <button
+                      type="button"
+                      onClick={captureRegistrationSample}
+                      disabled={registrationSamplesReady >= (status?.minRegistrationSamples ?? 3)}
+                    >
+                      {text("captureFaceSample", "Capture sample")}
+                    </button>
+                    <button type="button" onClick={clearRegistrationSamples}>
+                      {text("clearFaceSamples", "Reset samples")}
+                    </button>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={registerFace}
+                  disabled={registrationSamplesReady < (status?.minRegistrationSamples ?? 3)}
+                >
                   {t.registerButton}
                 </button>
-                <div className="sampleHint">
-                  {text("registrationSamples", "Face samples")}: {registrationSampleText}
-                </div>
               </section>
             )}
 
             <div className="message">{translateMessage(message || t.waiting)}</div>
-            <div className="loginHint">
-              {status?.recognitionReady
-                ? text("loginReadyHint", "Camera is ready. Keep your face centered and continue.")
-                : text("loginWaitingHint", "Waiting for the camera. Check camera permission if this takes too long.")}
-            </div>
           </aside>
         ) : null}
       </section>
 
-      {isAuthenticated ? (
-        <section className="trainingShell">
-          <div className="trainingPanel">
-            <div>
-              <h2>{text("trainingTitle", "Training")}</h2>
-              <p>{t.trainingCopy}</p>
-            </div>
-
-            <div className="metrics">
-              <Metric label={t.fitnessLevel} value={activeProfile?.level ?? 1} />
-              <Metric label={t.score} value={activeProfile?.score ?? 0} />
-              <Metric
-                label={text("completedSets", "Sets")}
-                value={activeProfile?.completedSets ?? 0}
-              />
-              <Metric label={t.currentGesture} value={gestureText} />
-              <Metric label={t.cameraFps} value={status?.fps ?? 0} />
-            </div>
-
-            <div className="trainingGrid">
-              <TrainingCard title={t.warmupTitle} copy={t.warmupCopy} />
-              <TrainingCard title={t.gestureTitle} copy={t.gestureCopy} />
-              <TrainingCard title={t.sessionTitle} copy={t.sessionCopy} />
-            </div>
-
-            <button className="secondary" type="button" onClick={logout}>
-              {t.logout}
-            </button>
-          </div>
-        </section>
-      ) : null}
     </main>
   );
 }
@@ -1889,29 +2415,11 @@ function ProfileRow({ label, value }: { label: string; value: string | number })
   );
 }
 
-function StatusRow({ label, value }: { label: string; value: string | number }) {
-  return (
-    <div>
-      <strong>{label}</strong>
-      <span>{value}</span>
-    </div>
-  );
-}
-
 function Metric({ label, value }: { label: string; value: string | number }) {
   return (
     <div className="metric">
       <strong>{label}</strong>
       <span>{value}</span>
-    </div>
-  );
-}
-
-function TrainingCard({ title, copy }: { title: string; copy: string }) {
-  return (
-    <div className="trainingCard">
-      <h3>{title}</h3>
-      <p>{copy}</p>
     </div>
   );
 }

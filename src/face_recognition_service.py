@@ -18,6 +18,7 @@ class FaceProfile:
     embeddings: list[np.ndarray]
     age: int | None = None
     gender: str | None = None
+    fitness_level: str | None = "beginner"
     level: int = 1
     score: int = 0
     login_count: int = 0
@@ -30,6 +31,7 @@ class OpenCvFaceSample:
     image: np.ndarray
     age: int | None = None
     gender: str | None = None
+    fitness_level: str | None = "beginner"
 
 
 def _normalize_embedding(embedding: np.ndarray) -> np.ndarray:
@@ -95,6 +97,7 @@ class FaceRecognitionService:
                 "name": profile.name,
                 "age": profile.age,
                 "gender": profile.gender,
+                "fitnessLevel": profile.fitness_level,
                 "level": profile.level,
                 "score": profile.score,
                 "loginCount": profile.login_count,
@@ -110,6 +113,7 @@ class FaceRecognitionService:
                     "name": sample.name,
                     "age": sample.age,
                     "gender": sample.gender,
+                    "fitnessLevel": sample.fitness_level,
                     "level": 1,
                     "score": 0,
                     "loginCount": 0,
@@ -180,6 +184,7 @@ class FaceRecognitionService:
                     profiles.name,
                     profiles.age,
                     profiles.gender,
+                    profiles.fitness_level,
                     profiles.level,
                     profiles.score,
                     profiles.login_count,
@@ -197,6 +202,7 @@ class FaceRecognitionService:
             name,
             age,
             gender,
+            fitness_level,
             level,
             score,
             login_count,
@@ -210,6 +216,7 @@ class FaceRecognitionService:
                     embeddings=[],
                     age=age,
                     gender=gender,
+                    fitness_level=str(fitness_level or "beginner"),
                     level=int(level or 1),
                     score=int(score or 0),
                     login_count=int(login_count or 0),
@@ -228,7 +235,7 @@ class FaceRecognitionService:
         with self._connect() as connection:
             rows = connection.execute(
                 """
-                SELECT profiles.name, profiles.age, profiles.gender, opencv_samples.image
+                SELECT profiles.name, profiles.age, profiles.gender, profiles.fitness_level, opencv_samples.image
                 FROM opencv_samples
                 JOIN profiles ON profiles.id = opencv_samples.profile_id
                 ORDER BY profiles.name, opencv_samples.id
@@ -241,8 +248,9 @@ class FaceRecognitionService:
                 image=self._array_from_blob(image).astype(np.uint8),
                 age=int(age) if age is not None else None,
                 gender=str(gender) if gender is not None else None,
+                fitness_level=str(fitness_level or "beginner"),
             )
-            for name, age, gender, image in rows
+            for name, age, gender, fitness_level, image in rows
         ]
         self._train_opencv_recognizer()
 
@@ -250,7 +258,13 @@ class FaceRecognitionService:
         with self._connect() as connection:
             connection.execute("DELETE FROM opencv_samples")
             for sample in self.opencv_samples:
-                profile_id = self._upsert_profile(connection, sample.name, sample.age, sample.gender)
+                profile_id = self._upsert_profile(
+                    connection,
+                    sample.name,
+                    sample.age,
+                    sample.gender,
+                    sample.fitness_level,
+                )
                 connection.execute(
                     "INSERT INTO opencv_samples (profile_id, image) VALUES (?, ?)",
                     (profile_id, self._array_to_blob(sample.image)),
@@ -260,7 +274,13 @@ class FaceRecognitionService:
         with self._connect() as connection:
             connection.execute("DELETE FROM embeddings")
             for profile in self.profiles:
-                profile_id = self._upsert_profile(connection, profile.name, profile.age, profile.gender)
+                profile_id = self._upsert_profile(
+                    connection,
+                    profile.name,
+                    profile.age,
+                    profile.gender,
+                    profile.fitness_level,
+                )
                 for embedding in profile.embeddings:
                     connection.execute(
                         "INSERT INTO embeddings (profile_id, embedding) VALUES (?, ?)",
@@ -350,7 +370,10 @@ class FaceRecognitionService:
         if self.opencv_recognizer is None or not self.opencv_samples:
             return "unknown", 0.0
 
-        label, distance = self.opencv_recognizer.predict(crop)
+        try:
+            label, distance = self.opencv_recognizer.predict(crop)
+        except cv2.error:
+            return "unknown", 0.0
         similarity = max(0.0, 1.0 - float(distance) / max(self.config.opencv_threshold, 1.0))
 
         if (
@@ -368,13 +391,14 @@ class FaceRecognitionService:
         detection: FaceDetection,
         age: int | None = None,
         gender: str | None = None,
+        fitness_level: str | None = "beginner",
     ) -> None:
         cleaned_name = name.strip()
         if not cleaned_name:
             raise ValueError("Name must not be empty.")
 
         if self.app is None:
-            self.register_opencv(cleaned_name, detection, age, gender)
+            self.register_opencv(cleaned_name, detection, age, gender, fitness_level)
             return
 
         if np.linalg.norm(detection.embedding) == 0:
@@ -387,12 +411,19 @@ class FaceRecognitionService:
                 profile.embeddings.append(detection.embedding)
                 profile.age = age if age is not None else profile.age
                 profile.gender = gender if gender is not None else profile.gender
+                profile.fitness_level = fitness_level or profile.fitness_level
                 self.save_profiles()
                 self.load_profiles()
                 return
 
         self.profiles.append(
-            FaceProfile(name=cleaned_name, embeddings=[detection.embedding], age=age, gender=gender)
+            FaceProfile(
+                name=cleaned_name,
+                embeddings=[detection.embedding],
+                age=age,
+                gender=gender,
+                fitness_level=fitness_level or "beginner",
+            )
         )
         self.save_profiles()
         self.load_profiles()
@@ -403,6 +434,7 @@ class FaceRecognitionService:
         detection: FaceDetection,
         age: int | None = None,
         gender: str | None = None,
+        fitness_level: str | None = "beginner",
     ) -> None:
         if self.opencv_recognizer is None:
             raise RuntimeError("OpenCV Face recognizer is not available.")
@@ -411,7 +443,13 @@ class FaceRecognitionService:
             raise RuntimeError("No face crop is available for registration.")
 
         self.opencv_samples.append(
-            OpenCvFaceSample(name=name, image=detection.crop, age=age, gender=gender)
+            OpenCvFaceSample(
+                name=name,
+                image=detection.crop,
+                age=age,
+                gender=gender,
+                fitness_level=fitness_level or "beginner",
+            )
         )
         self._train_opencv_recognizer()
         self.save_opencv_profiles()
@@ -428,6 +466,7 @@ class FaceRecognitionService:
                     name TEXT NOT NULL UNIQUE COLLATE NOCASE,
                     age INTEGER,
                     gender TEXT,
+                    fitness_level TEXT NOT NULL DEFAULT 'beginner',
                     level INTEGER NOT NULL DEFAULT 1,
                     score INTEGER NOT NULL DEFAULT 0,
                     login_count INTEGER NOT NULL DEFAULT 0,
@@ -435,6 +474,12 @@ class FaceRecognitionService:
                     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
                 )
                 """
+            )
+            self._add_missing_column(
+                connection,
+                "profiles",
+                "fitness_level",
+                "TEXT NOT NULL DEFAULT 'beginner'",
             )
             self._add_missing_column(connection, "profiles", "level", "INTEGER NOT NULL DEFAULT 1")
             self._add_missing_column(connection, "profiles", "score", "INTEGER NOT NULL DEFAULT 0")
@@ -487,16 +532,18 @@ class FaceRecognitionService:
         name: str,
         age: int | None = None,
         gender: str | None = None,
+        fitness_level: str | None = "beginner",
     ) -> int:
         connection.execute(
             """
-            INSERT INTO profiles (name, age, gender, level)
-            VALUES (?, ?, ?, 1)
+            INSERT INTO profiles (name, age, gender, fitness_level, level)
+            VALUES (?, ?, ?, COALESCE(?, 'beginner'), 1)
             ON CONFLICT(name) DO UPDATE SET
                 age = COALESCE(excluded.age, profiles.age),
-                gender = COALESCE(excluded.gender, profiles.gender)
+                gender = COALESCE(excluded.gender, profiles.gender),
+                fitness_level = COALESCE(?, profiles.fitness_level)
             """,
-            (name, age, gender),
+            (name, age, gender, fitness_level, fitness_level),
         )
         row = connection.execute("SELECT id FROM profiles WHERE name = ?", (name,)).fetchone()
         if row is None:

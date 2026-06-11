@@ -26,6 +26,7 @@ class RegisterRequest(BaseModel):
     name: str
     age: Optional[int] = None
     gender: Optional[str] = None
+    fitnessLevel: str = "beginner"
 
 
 class LoginRequest(BaseModel):
@@ -60,6 +61,8 @@ class RecognitionEngine:
         self.recent_registration_faces: deque[tuple[float, FaceDetection]] = deque(maxlen=12)
         self.registration_sample_window_seconds = 3.0
         self.min_registration_samples = 3
+        self.registration_samples: list[FaceDetection] = []
+        self.registration_sample_poses = ["front", "left", "right"]
         self.latest_gestures = []
         self.latest_exercise = None
         self.error: str | None = None
@@ -150,7 +153,6 @@ class RecognitionEngine:
                 with self.lock:
                     self.latest_jpeg = encoded.tobytes()
                     self.latest_faces = faces
-                    self._remember_registration_face(faces)
                     self.latest_gestures = gestures
                     self.latest_exercise = exercise
                     self.fps = camera_frame.fps
@@ -234,8 +236,9 @@ class RecognitionEngine:
                 "minFaceConfidence": self.min_face_confidence,
                 "minRecognitionConfidence": self.min_recognition_confidence,
                 "recognitionReady": self.face_service.recognition_ready,
-                "registrationSamplesReady": len(self._registration_faces_from_history()),
+                "registrationSamplesReady": min(len(self.registration_samples), self.min_registration_samples),
                 "minRegistrationSamples": self.min_registration_samples,
+                "nextRegistrationPose": self._next_registration_pose(),
                 "profiles": self.face_service.registered_profiles,
                 "signInCandidates": sign_in_candidates,
                 "workout": {
@@ -252,10 +255,16 @@ class RecognitionEngine:
                 },
             }
 
-    def register(self, name: str, age: int | None, gender: str | None) -> tuple[bool, str]:
+    def register(
+        self,
+        name: str,
+        age: int | None,
+        gender: str | None,
+        fitness_level: str,
+    ) -> tuple[bool, str]:
         with self.lock:
             faces = list(self.latest_faces)
-            registration_faces = self._registration_faces_from_history()
+            registration_faces = list(self.registration_samples)
 
         if not faces:
             return False, "No face is visible. Look into the camera and try again."
@@ -277,18 +286,54 @@ class RecognitionEngine:
                     target,
                     age if index == 0 else None,
                     gender if index == 0 else None,
+                    fitness_level if index == 0 else None,
                 )
         except Exception as error:
             return False, str(error)
 
         with self.lock:
             self.recent_registration_faces.clear()
+            self.registration_samples.clear()
 
         return (
             True,
             f"{name} has been registered with {len(registration_faces)} face samples. "
             "Select the recognized face to sign in.",
         )
+
+    def capture_registration_sample(self) -> tuple[bool, str]:
+        with self.lock:
+            faces = list(self.latest_faces)
+
+            if len(self.registration_samples) >= self.min_registration_samples:
+                return True, "All face samples are ready. You can register the profile now."
+
+            if not faces:
+                return False, "No face is visible. Look into the camera and try again."
+
+            if len(faces) > 1:
+                return False, "Only one face should be visible during registration."
+
+            target = faces[0]
+            if self._face_area(target) < 80 * 80:
+                return False, "Move closer to the camera before saving this face sample."
+
+            sample_number = len(self.registration_samples) + 1
+            pose = self._next_registration_pose()
+            self.registration_samples.append(self._copy_face_detection(target))
+
+            if len(self.registration_samples) >= self.min_registration_samples:
+                return True, "All face samples are ready. You can register the profile now."
+
+            next_pose = self._next_registration_pose()
+            return (
+                True,
+                f"Face sample {sample_number}/3 saved from {pose}. Next: turn {next_pose}.",
+            )
+
+    def clear_registration_samples(self) -> None:
+        with self.lock:
+            self.registration_samples.clear()
 
     def sign_in(self, requested_name: str | None = None) -> tuple[bool, str]:
         with self.lock:
@@ -530,6 +575,10 @@ class RecognitionEngine:
 
         return fresh_faces[-5:]
 
+    def _next_registration_pose(self) -> str:
+        index = min(len(self.registration_samples), len(self.registration_sample_poses) - 1)
+        return self.registration_sample_poses[index]
+
     def _face_area(self, face: FaceDetection) -> int:
         x1, y1, x2, y2 = face.box
         return max(0, x2 - x1) * max(0, y2 - y1)
@@ -602,8 +651,20 @@ def status() -> JSONResponse:
 
 @app.post("/api/register")
 def register(request: RegisterRequest) -> JSONResponse:
-    ok, message = engine.register(request.name, request.age, request.gender)
+    ok, message = engine.register(request.name, request.age, request.gender, request.fitnessLevel)
     return JSONResponse({"ok": ok, "message": message}, status_code=200 if ok else 400)
+
+
+@app.post("/api/register/sample")
+def capture_registration_sample() -> JSONResponse:
+    ok, message = engine.capture_registration_sample()
+    return JSONResponse({"ok": ok, "message": message}, status_code=200 if ok else 400)
+
+
+@app.post("/api/register/samples/clear")
+def clear_registration_samples() -> JSONResponse:
+    engine.clear_registration_samples()
+    return JSONResponse({"ok": True, "message": "Face samples cleared."})
 
 
 @app.post("/api/sign-in")

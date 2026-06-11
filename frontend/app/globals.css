@@ -1,6 +1,6 @@
 :root {
-  color: #18202f;
-  background: #f5f7fb;
+  color: var(--ui-text, #18202f);
+  background: var(--ui-bg, #f5f7fb);
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
@@ -12,7 +12,7 @@ body {
   min-width: 320px;
   min-height: 100vh;
   margin: 0;
-  background: linear-gradient(180deg, #ffffff 0%, #edf3fa 100%);
+  background: linear-gradient(180deg, var(--ui-surface, #ffffff) 0%, var(--ui-bg, #edf3fa) 100%);
 }
 
 button,
@@ -32,7 +32,7 @@ header {
   align-items: end;
   justify-content: space-between;
   gap: 18px;
-  margin-bottom: 18px;
+  margin-bottom: 14px;
 }
 
 h1,
@@ -50,7 +50,7 @@ h1 {
 }
 
 p {
-  color: #596273;
+  color: var(--ui-muted, #596273);
   line-height: 1.5;
 }
 
@@ -58,7 +58,83 @@ p {
   display: flex;
   flex-wrap: wrap;
   justify-content: end;
+  align-items: center;
   gap: 10px;
+}
+
+.profileTools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: end;
+  gap: 10px;
+}
+
+.paletteControl {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 46px;
+  padding: 5px 8px;
+  border: 1px solid var(--ui-border, rgba(22, 32, 52, 0.12));
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.86);
+}
+
+.paletteControl label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--ui-text, #18202f);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.colorPicker {
+  width: 28px;
+  min-height: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.rulesMenu {
+  position: relative;
+}
+
+.rulesButton {
+  min-width: 86px;
+}
+
+.rulesPopover {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 12;
+  display: grid;
+  gap: 10px;
+  width: min(420px, calc(100vw - 28px));
+  max-height: min(520px, calc(100vh - 120px));
+  overflow: auto;
+  padding: 14px;
+  border: 1px solid var(--ui-border, rgba(22, 32, 52, 0.12));
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 18px 45px rgba(26, 37, 58, 0.16);
+}
+
+.rulesPopover div {
+  display: grid;
+  gap: 4px;
+}
+
+.rulesPopover span {
+  color: var(--ui-muted, #596273);
+  font-size: 0.9rem;
+  line-height: 1.35;
 }
 
 .statusPill,
@@ -80,8 +156,58 @@ input {
 }
 
 .statusPill.warn {
-  color: #9a5b00;
-  background: #fff7e6;
+  color: var(--ui-primary, #1769e0);
+  background: var(--ui-primary-soft, #eef7ff);
+}
+
+.sessionBar {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(360px, 1.2fr) auto;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 14px;
+  padding: 12px;
+  border: 1px solid rgba(22, 32, 52, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 14px 36px rgba(26, 37, 58, 0.08);
+}
+
+.sessionIdentity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.sessionIdentity div {
+  display: grid;
+  gap: 2px;
+}
+
+.sessionIdentity strong {
+  color: var(--ui-text, #18202f);
+  font-size: 1.05rem;
+}
+
+.sessionIdentity span:not(.statusDot) {
+  color: var(--ui-muted, #5c687a);
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.statusDot {
+  width: 13px;
+  height: 13px;
+  border-radius: 999px;
+  background: #20b26b;
+  box-shadow: 0 0 0 5px rgba(32, 178, 107, 0.14);
+}
+
+.sessionStats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
 }
 
 .profileMenu {
@@ -94,7 +220,7 @@ input {
   min-height: 46px;
   padding: 6px 14px;
   border: 1px solid rgba(22, 32, 52, 0.1);
-  color: #18202f;
+  color: var(--ui-text, #18202f);
   background: rgba(255, 255, 255, 0.86);
   box-shadow: 0 10px 30px rgba(26, 37, 58, 0.08);
   backdrop-filter: blur(16px);
@@ -102,7 +228,7 @@ input {
 }
 
 .profileButton small {
-  color: #667085;
+  color: var(--ui-muted, #667085);
   font-weight: 800;
 }
 
@@ -126,11 +252,11 @@ input {
   display: flex;
   justify-content: space-between;
   gap: 16px;
-  color: #4d586b;
+  color: var(--ui-muted, #4d586b);
 }
 
 .profileRow strong {
-  color: #18202f;
+  color: var(--ui-text, #18202f);
 }
 
 select,
@@ -156,10 +282,31 @@ input {
   align-items: start;
 }
 
+.layout:not(.authenticatedLayout) {
+  grid-template-columns: minmax(230px, 1fr) minmax(320px, 380px);
+  gap: 14px;
+}
+
+.layout:not(.authenticatedLayout) .cameraColumn {
+  width: 100%;
+}
+
+.layout:not(.authenticatedLayout) .cameraPanel {
+  min-height: 360px;
+}
+
+.layout:not(.authenticatedLayout) .cameraPanel img {
+  min-height: 360px;
+}
+
+.layout:not(.authenticatedLayout) .sidePanel {
+  gap: 12px;
+  padding: 16px;
+}
+
 .cameraColumn,
 .cameraPanel,
 .sidePanel,
-.trainingPanel,
 .exercisePanel,
 .metric {
   border: 1px solid rgba(22, 32, 52, 0.1);
@@ -169,6 +316,7 @@ input {
 }
 
 .cameraPanel {
+  position: relative;
   overflow: hidden;
   min-height: 430px;
   background: #10151f;
@@ -189,30 +337,57 @@ input {
   object-fit: cover;
 }
 
-.sidePanel,
-.trainingPanel {
+.cameraBadge {
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: 14px;
+  padding: 11px 13px;
+  border: 1px solid rgba(255, 255, 255, 0.36);
+  border-radius: 8px;
+  color: #ffffff;
+  background: rgba(16, 21, 31, 0.72);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.24);
+  font-weight: 900;
+  line-height: 1.35;
+  backdrop-filter: blur(12px);
+}
+
+.cameraBadge.ready {
+  color: #0f3b27;
+  background: rgba(235, 255, 244, 0.9);
+}
+
+.sidePanel {
   display: grid;
   gap: 16px;
+  min-width: 0;
   padding: 20px;
+}
+
+.authPanel {
+  align-content: start;
 }
 
 .tabs {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
+  min-width: 0;
 }
 
 .tabs button {
-  color: #1769e0;
-  border: 1px solid rgba(23, 105, 224, 0.22);
+  color: var(--ui-primary, #1769e0);
+  border: 1px solid color-mix(in srgb, var(--ui-primary, #1769e0) 24%, transparent);
   background: #ffffff;
 }
 
 .tabs button.active,
 button {
+  min-width: 0;
   color: #ffffff;
   border: 0;
-  background: #1769e0;
+  background: var(--ui-primary, #1769e0);
   cursor: pointer;
   font-weight: 900;
 }
@@ -223,8 +398,8 @@ button:disabled {
 }
 
 button.secondary {
-  color: #1769e0;
-  border: 1px solid rgba(23, 105, 224, 0.24);
+  color: var(--ui-primary, #1769e0);
+  border: 1px solid color-mix(in srgb, var(--ui-primary, #1769e0) 24%, transparent);
   background: #ffffff;
 }
 
@@ -233,40 +408,76 @@ button.secondary {
   gap: 12px;
 }
 
+.form h2 {
+  margin-bottom: 8px;
+  font-size: 1.45rem;
+  line-height: 1.15;
+}
+
+.form p {
+  margin-bottom: 0;
+}
+
 label {
   display: grid;
   gap: 7px;
-  color: #18202f;
+  color: var(--ui-text, #18202f);
   font-weight: 900;
 }
 
 .message {
+  min-width: 0;
   min-height: 44px;
   padding: 11px 12px;
   border-radius: 8px;
-  color: #4d586b;
+  color: var(--ui-muted, #4d586b);
   background: #f3f6fb;
+  overflow-wrap: anywhere;
 }
 
 .message.success {
-  color: #176b3a;
-  background: #eaf8ef;
+  color: color-mix(in srgb, var(--ui-success, #1f9d63) 74%, #000000);
+  background: color-mix(in srgb, var(--ui-success, #1f9d63) 12%, #ffffff);
 }
 
-.sampleHint {
+.sampleHint,
+.sampleCapture {
   padding: 10px 12px;
   border: 1px solid rgba(22, 32, 52, 0.1);
   border-radius: 8px;
-  color: #4d586b;
+  color: var(--ui-muted, #4d586b);
   background: #f8fafd;
   font-weight: 800;
+}
+
+.sampleCapture {
+  display: grid;
+  gap: 12px;
+}
+
+.sampleCapture div:first-child {
+  display: grid;
+  gap: 5px;
+}
+
+.sampleCapture span,
+.sampleCapture small {
+  color: var(--ui-muted, #5d6a7d);
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.sampleActions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
 }
 
 .loginHint {
   padding: 12px 14px;
   border-radius: 8px;
-  color: #39465a;
-  background: #eef7ff;
+  color: var(--ui-text, #39465a);
+  background: var(--ui-primary-soft, #eef7ff);
   font-weight: 800;
   line-height: 1.45;
 }
@@ -283,23 +494,39 @@ label {
   justify-content: space-between;
   gap: 12px;
   padding: 10px 12px;
-  color: #4d586b;
+  color: var(--ui-muted, #4d586b);
 }
 
-.trainingShell {
-  margin-top: 18px;
+.metric {
+  align-items: center;
+  min-height: 48px;
+  background: #ffffff;
+  box-shadow: none;
 }
 
-.trainingGrid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
+.metric strong {
+  color: var(--ui-text, #18202f);
+}
+
+.metric span {
+  color: var(--ui-text, #18202f);
+  font-weight: 900;
 }
 
 .exercisePanel {
   display: grid;
-  gap: 14px;
+  gap: 12px;
   padding: 16px;
+}
+
+.exercisePanel h3 {
+  margin-bottom: 6px;
+  font-size: 1.35rem;
+}
+
+.exercisePanel p {
+  margin-bottom: 0;
+  font-size: 0.94rem;
 }
 
 .exerciseSidePanel {
@@ -321,10 +548,91 @@ label {
   grid-template-columns: 1fr;
 }
 
+.planSection {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(22, 32, 52, 0.1);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--ui-primary-soft, #eef7ff) 42%, #ffffff);
+}
+
+.planSection h4 {
+  margin: 0 0 4px;
+}
+
+.planSection p {
+  margin: 0 0 6px;
+  color: var(--ui-muted, #5c687a);
+  font-size: 0.9rem;
+  line-height: 1.35;
+}
+
+.planSection small {
+  color: var(--ui-muted, #4d586b);
+  font-weight: 800;
+}
+
+.planGrid {
+  display: grid;
+  gap: 8px;
+}
+
+.planCard {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid rgba(22, 32, 52, 0.12);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.planCard.active {
+  border-color: color-mix(in srgb, var(--ui-primary, #1769e0) 52%, transparent);
+  background: var(--ui-primary-soft, #eef7ff);
+}
+
+.planToggle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 40px;
+  padding: 0;
+  color: var(--ui-text, #18202f);
+  background: transparent;
+  text-align: left;
+}
+
+.planToggle span {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  color: #ffffff;
+  background: var(--ui-primary, #1769e0);
+}
+
+.planDetails {
+  display: grid;
+  gap: 8px;
+}
+
+.planDetails span,
+.planCard span {
+  color: var(--ui-muted, #4d586b);
+  font-size: 0.86rem;
+  line-height: 1.35;
+}
+
+.nextPlanButton {
+  width: 100%;
+}
+
 .workoutProgress {
   overflow: hidden;
   width: 100%;
-  height: 12px;
+  height: 14px;
   border-radius: 8px;
   background: #e3e9f2;
 }
@@ -332,8 +640,12 @@ label {
 .workoutProgress div {
   height: 100%;
   border-radius: inherit;
-  background: #1fb56d;
+  background: var(--ui-primary, #1769e0);
   transition: width 180ms ease;
+}
+
+.compactMetrics {
+  grid-template-columns: 1fr;
 }
 
 .exerciseExample {
@@ -354,49 +666,55 @@ label {
 .exerciseRule {
   padding: 12px 14px;
   border-radius: 8px;
-  color: #39465a;
-  background: #eef7ff;
+  color: var(--ui-text, #39465a);
+  background: var(--ui-primary-soft, #eef7ff);
   font-weight: 800;
   line-height: 1.45;
 }
 
 .exercisePreview {
   display: grid;
-  grid-template-columns: minmax(220px, 320px) minmax(0, 1fr);
+  grid-template-columns: minmax(220px, 320px) minmax(280px, 1fr);
   gap: 14px;
   align-items: start;
 }
 
+.exerciseLiveStatus {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+}
+
 .exerciseGuidance {
   padding: 12px 14px;
-  border: 1px solid rgba(31, 181, 109, 0.22);
+  border: 1px solid color-mix(in srgb, var(--ui-primary, #1769e0) 24%, transparent);
   border-radius: 8px;
-  color: #254537;
-  background: #effaf4;
+  color: var(--ui-text, #254537);
+  background: var(--ui-primary-soft, #eef7ff);
   font-weight: 800;
   line-height: 1.45;
 }
 
-.trainingCard {
-  min-height: 124px;
-  padding: 16px;
-  border: 1px solid rgba(22, 32, 52, 0.1);
-  border-radius: 8px;
-  background: #f8fafd;
-}
-
 @media (max-width: 880px) {
   header,
-  .layout,
   .authenticatedLayout,
   .exerciseTrainer,
-  .trainingGrid {
+  .sessionBar {
     display: grid;
     grid-template-columns: 1fr;
   }
 
+  .sessionStats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
   .topActions {
     justify-content: stretch;
+  }
+
+  .layout:not(.authenticatedLayout) {
+    grid-template-columns: minmax(220px, 0.8fr) minmax(300px, 1fr);
+    gap: 12px;
   }
 
   .exercisePreview {
@@ -411,5 +729,17 @@ label {
   .profilePopover {
     position: static;
     width: 100%;
+  }
+}
+
+@media (max-width: 620px) {
+  .layout,
+  .layout:not(.authenticatedLayout) {
+    grid-template-columns: 1fr;
+  }
+
+  .sessionStats,
+  .sampleActions {
+    grid-template-columns: 1fr;
   }
 }

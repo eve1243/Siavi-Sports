@@ -58,9 +58,7 @@ def draw_exercise(frame: np.ndarray, exercise: ExerciseDetection | None) -> None
     if exercise is None:
         return
 
-    label = f"{exercise.label} x{exercise.repetitions} {exercise.confidence:.2f}"
     color = GREEN if exercise.label != "unknown" else YELLOW
-    _draw_label(frame, label, 16, frame.shape[0] - 54, color)
 
     for start, end in exercise.connections:
         if start < len(exercise.landmarks) and end < len(exercise.landmarks):
