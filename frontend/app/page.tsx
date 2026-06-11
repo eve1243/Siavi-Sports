@@ -37,6 +37,8 @@ type Workout = {
   currentReps: number;
   targetReps: number;
   targetSource: string;
+  setsRequiredForLevel: number;
+  setsCompletedInLevel: number;
   state: string;
   message: string;
   guidance: string;
@@ -96,6 +98,7 @@ const translations = {
     score: "Score",
     loginCount: "Logins",
     completedSets: "Sets",
+    levelProgress: "Next level",
     currentGesture: "Current gesture",
     cameraFps: "Camera FPS",
     warmupTitle: "Warm-up",
@@ -187,6 +190,15 @@ const translations = {
     repsSuffix: "reps.",
     setCompletePrefix: "Set complete.",
     scoreAndLevelUpSuffix: "score and level up.",
+    levelUpPrefix: "Level up! Level",
+    levelUnlockedSuffix: "unlocked.",
+    scoreSuffix: "score.",
+    setsTowardLevelSuffix: "sets toward next level.",
+    completeMoreSetsPrefix: "Complete",
+    moreSetsLevelSuffix: "more set(s) to reach the next level.",
+    newChallengePrefix: "New challenge:",
+    setWithRepsConnector: "set(s) with",
+    repsEachSuffix: "reps each.",
     logout: "Log out",
     waiting: "Waiting for camera...",
     enterName: "Please enter your name.",
@@ -232,6 +244,7 @@ const translations = {
     score: "Punkte",
     loginCount: "Logins",
     completedSets: "Saetze",
+    levelProgress: "Naechste Stufe",
     currentGesture: "Aktuelle Geste",
     cameraFps: "Kamera-FPS",
     warmupTitle: "Aufwaermen",
@@ -323,6 +336,15 @@ const translations = {
     repsSuffix: "Wiederholungen.",
     setCompletePrefix: "Satz abgeschlossen.",
     scoreAndLevelUpSuffix: "Punkte und Stufenaufstieg.",
+    levelUpPrefix: "Stufenaufstieg! Stufe",
+    levelUnlockedSuffix: "freigeschaltet.",
+    scoreSuffix: "Punkte.",
+    setsTowardLevelSuffix: "Saetze bis zur naechsten Stufe.",
+    completeMoreSetsPrefix: "Schaffe",
+    moreSetsLevelSuffix: "weitere Saetze bis zur naechsten Stufe.",
+    newChallengePrefix: "Neue Challenge:",
+    setWithRepsConnector: "Saetze mit",
+    repsEachSuffix: "Wiederholungen.",
     logout: "Ausloggen",
     waiting: "Warte auf Kamera...",
     enterName: "Bitte gib deinen Namen ein.",
@@ -376,6 +398,7 @@ const translations = {
     sessionTitle: "Sessao",
     sessionCopy: "A logica de treino pode ser expandida aqui.",
     completedSets: "Series",
+    levelProgress: "Proximo nivel",
     exerciseAiTitle: "IA de exercicio",
     exerciseAiCopy: "Reconhecimento atual do exercicio com aprendizagem local.",
     exerciseLabel: "Exercicio",
@@ -459,6 +482,15 @@ const translations = {
     repsSuffix: "repeticoes.",
     setCompletePrefix: "Serie concluida.",
     scoreAndLevelUpSuffix: "pontos e subida de nivel.",
+    levelUpPrefix: "Subida de nivel! Nivel",
+    levelUnlockedSuffix: "desbloqueado.",
+    scoreSuffix: "pontos.",
+    setsTowardLevelSuffix: "series ate ao proximo nivel.",
+    completeMoreSetsPrefix: "Completa",
+    moreSetsLevelSuffix: "mais series para chegar ao proximo nivel.",
+    newChallengePrefix: "Novo desafio:",
+    setWithRepsConnector: "serie(s) com",
+    repsEachSuffix: "repeticoes cada.",
     logout: "Sair",
     waiting: "A espera da camara...",
     enterName: "Introduz o teu nome.",
@@ -512,6 +544,7 @@ const translations = {
     sessionTitle: "Sesija",
     sessionCopy: "Logika treninga moze ovde dalje da se prosiri.",
     completedSets: "Serije",
+    levelProgress: "Sledeci nivo",
     exerciseAiTitle: "AI za vezbe",
     exerciseAiCopy: "Trenutno prepoznavanje vezbe sa lokalnim ucenjem.",
     exerciseLabel: "Vezba",
@@ -595,6 +628,15 @@ const translations = {
     repsSuffix: "ponavljanja.",
     setCompletePrefix: "Serija zavrsena.",
     scoreAndLevelUpSuffix: "poena i prelazak na visi nivo.",
+    levelUpPrefix: "Nivo gore! Nivo",
+    levelUnlockedSuffix: "otkljucan.",
+    scoreSuffix: "poena.",
+    setsTowardLevelSuffix: "serije do sledeceg nivoa.",
+    completeMoreSetsPrefix: "Zavrsi",
+    moreSetsLevelSuffix: "jos serija do sledeceg nivoa.",
+    newChallengePrefix: "Novi izazov:",
+    setWithRepsConnector: "serija sa",
+    repsEachSuffix: "ponavljanja svaka.",
     logout: "Odjavi se",
     waiting: "Ceka se kamera...",
     enterName: "Unesi ime.",
@@ -648,6 +690,7 @@ const translations = {
     sessionTitle: "训练",
     sessionCopy: "训练逻辑可以在这里继续扩展。",
     completedSets: "??",
+    levelProgress: "下一级",
     exerciseAiTitle: "?? AI",
     exerciseAiCopy: "???????????????",
     exerciseLabel: "??",
@@ -731,6 +774,15 @@ const translations = {
     repsSuffix: "??",
     setCompletePrefix: "?????",
     scoreAndLevelUpSuffix: "?????",
+    levelUpPrefix: "升级！等级",
+    levelUnlockedSuffix: "已解锁。",
+    scoreSuffix: "分。",
+    setsTowardLevelSuffix: "组到下一级。",
+    completeMoreSetsPrefix: "完成",
+    moreSetsLevelSuffix: "更多组即可到达下一级。",
+    newChallengePrefix: "新挑战：",
+    setWithRepsConnector: "组，每组",
+    repsEachSuffix: "次。",
     logout: "退出登录",
     waiting: "正在等待摄像头...",
     enterName: "请输入姓名。",
@@ -784,6 +836,7 @@ const translations = {
     sessionTitle: "Session",
     sessionCopy: "La logique d'entraînement peut être étendue ici.",
     completedSets: "Series",
+    levelProgress: "Niveau suivant",
     exerciseAiTitle: "IA d'exercice",
     exerciseAiCopy: "Reconnaissance actuelle de l'exercice avec apprentissage local.",
     exerciseLabel: "Exercice",
@@ -867,6 +920,15 @@ const translations = {
     repsSuffix: "repetitions.",
     setCompletePrefix: "Serie terminee.",
     scoreAndLevelUpSuffix: "points et montee de niveau.",
+    levelUpPrefix: "Niveau gagne ! Niveau",
+    levelUnlockedSuffix: "debloque.",
+    scoreSuffix: "points.",
+    setsTowardLevelSuffix: "series avant le niveau suivant.",
+    completeMoreSetsPrefix: "Terminez",
+    moreSetsLevelSuffix: "series de plus pour atteindre le niveau suivant.",
+    newChallengePrefix: "Nouveau defi :",
+    setWithRepsConnector: "serie(s) avec",
+    repsEachSuffix: "repetitions chacune.",
     logout: "Se déconnecter",
     waiting: "En attente de la caméra...",
     enterName: "Veuillez saisir votre nom.",
@@ -920,6 +982,7 @@ const translations = {
     sessionTitle: "அமர்வு",
     sessionCopy: "பயிற்சி செயல்முறையை இங்கே மேலும் விரிவாக்கலாம்.",
     completedSets: "???????",
+    levelProgress: "அடுத்த நிலை",
     exerciseAiTitle: "??????????? AI",
     exerciseAiCopy: "??????? ????????? ???????? ??????????? ????????.",
     exerciseLabel: "???????????",
@@ -1003,6 +1066,15 @@ const translations = {
     repsSuffix: "???????.",
     setCompletePrefix: "???? ?????????.",
     scoreAndLevelUpSuffix: "????????? ??????? ???? ??????.",
+    levelUpPrefix: "நிலை உயர்வு! நிலை",
+    levelUnlockedSuffix: "திறக்கப்பட்டது.",
+    scoreSuffix: "மதிப்பெண்.",
+    setsTowardLevelSuffix: "அடுத்த நிலைக்கு செட்கள்.",
+    completeMoreSetsPrefix: "முடிக்கவும்",
+    moreSetsLevelSuffix: "மேலும் செட்கள் அடுத்த நிலைக்கு.",
+    newChallengePrefix: "புதிய சவால்:",
+    setWithRepsConnector: "செட்கள், ஒவ்வொன்றும்",
+    repsEachSuffix: "முறை.",
     logout: "வெளியேறு",
     waiting: "கேமராவுக்காக காத்திருக்கிறது...",
     enterName: "பெயரை உள்ளிடுங்கள்.",
@@ -1056,6 +1128,7 @@ const translations = {
     sessionTitle: "Kĩũngano",
     sessionCopy: "Mũtaratara wa kũthomithia no wongererwo haha.",
     completedSets: "Seti",
+    levelProgress: "Level ingi",
     exerciseAiTitle: "AI ya mathomo",
     exerciseAiCopy: "Kumenya mathomo kwa riu na guthoma kwa kompiuta.",
     exerciseLabel: "Ithomo",
@@ -1139,6 +1212,15 @@ const translations = {
     repsSuffix: "mahinda.",
     setCompletePrefix: "Seti niyathira.",
     scoreAndLevelUpSuffix: "score na level iguru.",
+    levelUpPrefix: "Level iguru! Level",
+    levelUnlockedSuffix: "niyakinguka.",
+    scoreSuffix: "score.",
+    setsTowardLevelSuffix: "seti nginya level ingi.",
+    completeMoreSetsPrefix: "Hinga",
+    moreSetsLevelSuffix: "seti ingi nginya level ingi.",
+    newChallengePrefix: "Challenge njeru:",
+    setWithRepsConnector: "seti na",
+    repsEachSuffix: "mahinda o seti.",
     logout: "Thii nja",
     waiting: "Kũeterera camera...",
     enterName: "Andĩka rĩĩtwa rĩaku.",
@@ -1338,6 +1420,26 @@ export default function Home() {
     match = value.match(/^(\d+)\/(\d+) reps\.$/);
     if (match) {
       return `${match[1]}/${match[2]} ${text("repsSuffix", "reps.")}`;
+    }
+
+    match = value.match(/^Level up! Level (\d+) unlocked\. \+(\d+) score\.$/);
+    if (match) {
+      return `${text("levelUpPrefix", "Level up! Level")} ${match[1]} ${text("levelUnlockedSuffix", "unlocked.")} +${match[2]} ${text("scoreSuffix", "score.")}`;
+    }
+
+    match = value.match(/^Set complete\. (\d+)\/(\d+) sets toward next level\. \+(\d+) score\.$/);
+    if (match) {
+      return `${text("setCompletePrefix", "Set complete.")} ${match[1]}/${match[2]} ${text("setsTowardLevelSuffix", "sets toward next level.")} +${match[3]} ${text("scoreSuffix", "score.")}`;
+    }
+
+    match = value.match(/^Complete (\d+) more set\(s\) to reach the next level\.$/);
+    if (match) {
+      return `${text("completeMoreSetsPrefix", "Complete")} ${match[1]} ${text("moreSetsLevelSuffix", "more set(s) to reach the next level.")}`;
+    }
+
+    match = value.match(/^New challenge: (\d+) set\(s\) with (\d+) reps each\.$/);
+    if (match) {
+      return `${text("newChallengePrefix", "New challenge:")} ${match[1]} ${text("setWithRepsConnector", "set(s) with")} ${match[2]} ${text("repsEachSuffix", "reps each.")}`;
     }
 
     match = value.match(/^Set complete\. \+(\d+) score and level up\.$/);
@@ -1550,9 +1652,23 @@ export default function Home() {
       </header>
 
       <section className={isAuthenticated ? "layout authenticatedLayout" : "layout"}>
-        <div className="cameraPanel">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/video.mjpg" alt={text("cameraAlt", "Live camera with sports tracking overlay")} />
+        <div className="cameraColumn">
+          <div className="cameraPanel">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/video.mjpg" alt={text("cameraAlt", "Live camera with sports tracking overlay")} />
+          </div>
+          {isAuthenticated && exampleImage ? (
+            <div className="exercisePreview">
+              <div className="exerciseExample">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={exampleImage}
+                  alt={`${translateExerciseName(previewExercise)} ${text("exerciseExampleAlt", "exercise example")}`}
+                />
+              </div>
+              {activeExerciseRule ? <div className="exerciseRule">{activeExerciseRule}</div> : null}
+            </div>
+          ) : null}
         </div>
 
         {isAuthenticated ? (
@@ -1590,31 +1706,21 @@ export default function Home() {
               <div className="metrics">
                 <Metric
                   label={text("exerciseLabel", "Exercise")}
-                  value={exercise?.label ? translateExerciseName(exercise.label) : text("unknown", "unknown")}
+                  value={translateExerciseName(previewExercise)}
                 />
-                <Metric
-                  label={text("exerciseSource", "Source")}
-                  value={exercise?.source ? translateStatusValue(exercise.source) : text("noneValue", "none")}
-                />
-                <Metric label={text("exerciseReps", "Reps")} value={exercise?.repetitions ?? 0} />
                 <Metric
                   label={text("workoutTarget", "Target")}
                   value={`${workout?.currentReps ?? 0}/${workout?.targetReps ?? 5}`}
                 />
-                <Metric
-                  label={text("workoutState", "Set")}
-                  value={workout?.state ? translateStatusValue(workout.state) : text("idle", "idle")}
-                />
-                <Metric
-                  label={text("targetMode", "Target mode")}
-                  value={translateStatusValue(workout?.targetSource ?? "level")}
-                />
                 <Metric label={t.fitnessLevel} value={activeProfile?.level ?? 1} />
+                <Metric
+                  label={text("levelProgress", "Next level")}
+                  value={`${workout?.setsCompletedInLevel ?? 0}/${workout?.setsRequiredForLevel ?? 1}`}
+                />
                 <Metric
                   label={text("completedSets", "Sets")}
                   value={activeProfile?.completedSets ?? 0}
                 />
-                <Metric label={text("exerciseSamples", "Samples")} value={status?.exerciseSampleCount ?? 0} />
               </div>
               <div className="workoutProgress" aria-label={text("workoutProgressLabel", "Workout progress")}>
                 <div style={{ width: `${workoutProgress}%` }} />
@@ -1628,16 +1734,6 @@ export default function Home() {
                     ?? text("defaultExerciseGuidance", "Choose an exercise, keep your full body visible, then start a set.")
                 )}
               </div>
-              {exampleImage ? (
-                <div className="exerciseExample">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={exampleImage}
-                    alt={`${translateExerciseName(previewExercise)} ${text("exerciseExampleAlt", "exercise example")}`}
-                  />
-                </div>
-              ) : null}
-              {exampleImage ? <div className="exerciseRule">{activeExerciseRule}</div> : null}
             </div>
           </aside>
         ) : null}

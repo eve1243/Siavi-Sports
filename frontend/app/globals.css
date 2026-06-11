@@ -156,6 +156,7 @@ input {
   align-items: start;
 }
 
+.cameraColumn,
 .cameraPanel,
 .sidePanel,
 .trainingPanel,
@@ -171,6 +172,14 @@ input {
   overflow: hidden;
   min-height: 430px;
   background: #10151f;
+}
+
+.cameraColumn {
+  display: grid;
+  gap: 18px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .cameraPanel img {
@@ -329,8 +338,7 @@ label {
 
 .exerciseExample {
   overflow: hidden;
-  width: min(100%, 360px);
-  justify-self: center;
+  width: 100%;
   border: 1px solid rgba(22, 32, 52, 0.1);
   border-radius: 8px;
   background: #ffffff;
@@ -350,6 +358,13 @@ label {
   background: #eef7ff;
   font-weight: 800;
   line-height: 1.45;
+}
+
+.exercisePreview {
+  display: grid;
+  grid-template-columns: minmax(220px, 320px) minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
 }
 
 .exerciseGuidance {
@@ -382,6 +397,10 @@ label {
 
   .topActions {
     justify-content: stretch;
+  }
+
+  .exercisePreview {
+    grid-template-columns: 1fr;
   }
 
   .profileMenu,

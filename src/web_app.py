@@ -73,6 +73,8 @@ class RecognitionEngine:
         self.workout_current_reps = 0
         self.workout_target_reps = 5
         self.workout_target_source = "level"
+        self.workout_sets_required = 1
+        self.workout_sets_completed_in_level = 0
         self.workout_state = "idle"
         self.workout_message = "Select an exercise and start a set."
         self.workout_guidance = "Choose an exercise, keep your full body visible, then start a set."
@@ -241,6 +243,8 @@ class RecognitionEngine:
                     "currentReps": self.workout_current_reps,
                     "targetReps": self.workout_target_reps,
                     "targetSource": self.workout_target_source,
+                    "setsRequiredForLevel": self.workout_sets_required,
+                    "setsCompletedInLevel": self.workout_sets_completed_in_level,
                     "state": self.workout_state,
                     "message": self.workout_message,
                     "guidance": self.workout_guidance,
@@ -337,6 +341,7 @@ class RecognitionEngine:
         self.workout_current_reps = 0
         self.workout_target_reps = self._target_reps_for_active_user(target_reps)
         self.workout_target_source = "custom" if target_reps is not None else "level"
+        self._sync_level_challenge()
         self.workout_state = "running"
         self.workout_completed = False
         self.workout_message = f"Set started: {self._display_exercise(cleaned_exercise)}."
@@ -363,21 +368,39 @@ class RecognitionEngine:
         if target_reps is not None:
             return max(1, min(int(target_reps), 100))
 
-        profile = self.face_service.get_registered_profile(self.active_user)
-        level = 1
-        if profile is not None:
-            level = int(profile.get("level") or 1)
-        return max(5, level * 5)
+        level, _, _, _ = self._level_challenge_for_active_user()
+        return min(40, 5 + ((level - 1) * 3))
 
     def _reset_workout_for_profile(self) -> None:
         self.workout_baseline_reps = self.exercise_service.repetitions.get(self.workout_exercise, 0)
         self.workout_current_reps = 0
         self.workout_target_reps = self._target_reps_for_active_user()
         self.workout_target_source = "level"
+        self._sync_level_challenge()
         self.workout_state = "idle"
         self.workout_completed = False
         self.workout_message = "Select an exercise and start a set."
         self.workout_guidance = "Choose an exercise, keep your full body visible, then start a set."
+
+    def _sets_required_for_level(self, level: int) -> int:
+        return min(4, 1 + ((max(1, level) - 1) // 2))
+
+    def _level_challenge_for_active_user(self) -> tuple[int, int, int, int]:
+        profile = self.face_service.get_registered_profile(self.active_user)
+        level = 1
+        completed_sets = 0
+        if profile is not None:
+            level = int(profile.get("level") or 1)
+            completed_sets = int(profile.get("completedSets") or 0)
+
+        sets_required = self._sets_required_for_level(level)
+        sets_completed_in_level = completed_sets % sets_required
+        return level, completed_sets, sets_required, sets_completed_in_level
+
+    def _sync_level_challenge(self) -> None:
+        _, _, sets_required, sets_completed_in_level = self._level_challenge_for_active_user()
+        self.workout_sets_required = sets_required
+        self.workout_sets_completed_in_level = sets_completed_in_level
 
     def _update_workout(self, label: str, state: str, total_reps: int) -> None:
         if self.active_user is None or self.workout_state != "running" or self.workout_completed:
@@ -399,18 +422,40 @@ class RecognitionEngine:
         if current_reps < self.workout_target_reps:
             return
 
-        score_delta = self.workout_target_reps * 10
-        self.face_service.record_progress(
+        level, _, sets_required, sets_completed_in_level = self._level_challenge_for_active_user()
+        next_sets_completed = sets_completed_in_level + 1
+        level_delta = 1 if next_sets_completed >= sets_required else 0
+        score_delta = (self.workout_target_reps * 10) + (level * 20) + (50 if level_delta else 0)
+        profile = self.face_service.record_progress(
             self.active_user,
             score_delta=score_delta,
-            level_delta=1,
+            level_delta=level_delta,
             completed_sets_delta=1,
         )
         self.workout_state = "completed"
         self.workout_completed = True
         self.exercise_service.set_target_exercise(None)
-        self.workout_message = f"Set complete. +{score_delta} score and level up."
-        self.workout_guidance = "Set complete. Rest briefly or choose the next exercise."
+        self._sync_level_challenge()
+
+        if level_delta:
+            new_level = int(profile.get("level") or level + 1)
+            next_reps = self._target_reps_for_active_user()
+            next_sets_required = self._sets_required_for_level(new_level)
+            self.workout_target_reps = next_reps
+            self.workout_message = f"Level up! Level {new_level} unlocked. +{score_delta} score."
+            self.workout_guidance = (
+                f"New challenge: {next_sets_required} set(s) with {next_reps} reps each."
+            )
+            return
+
+        remaining_sets = max(0, sets_required - next_sets_completed)
+        self.workout_message = (
+            f"Set complete. {next_sets_completed}/{sets_required} sets toward next level. "
+            f"+{score_delta} score."
+        )
+        self.workout_guidance = (
+            f"Complete {remaining_sets} more set(s) to reach the next level."
+        )
 
     def _display_exercise(self, label: str) -> str:
         labels = {
